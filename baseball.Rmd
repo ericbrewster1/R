@@ -1,0 +1,109 @@
+---
+title: "Nats R&D"
+author: "Eric Brewster"
+date: "2023-12-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(Lahman)
+library(dplyr)
+teams = Teams
+```
+
+
+```{r}
+# Run differential
+teams$R_diff <- teams$R - teams$RA
+
+# Post 1970
+teams <- subset(teams, yearID > 1970)
+
+# Variable for wins next year (Wnext)
+teams <- teams %>%
+  arrange(teamID, yearID) %>%
+  group_by(teamID) %>%
+  mutate(Wnext = lead(W))
+
+# Fit the model
+next_season_model <- lm(Wnext ~ W + R_diff + R + RA, data = teams)
+
+# 1
+extra_runs_needed <- coef(next_season_model)['W']
+cat(round(-1/extra_runs_needed, 2))
+
+# 2
+expected_wins_at_0_diff <- predict(next_season_model, newdata = data.frame(W = 0, R_diff = 0, R = 0, RA = 0))
+cat(round(expected_wins_at_0_diff, 2))
+
+# 3
+expected_wins <- predict(next_season_model)
+probability_7_more_wins <- sum(teams$W > expected_wins + 7) / nrow(teams)
+cat(round(probability_7_more_wins, 4))
+
+# 4
+summary(next_season_model)
+```
+
+
+```{r, eval=FALSE}
+library(dplyr)
+library(tidyr)
+
+# Convert 'game_date' to Date
+game_lookup$game_date <- as.Date(game_lookup$game_date)
+
+# Get the date range for the last 7 days
+end_date <- Sys.Date()
+start_date <- end_date - 7
+
+# Filter pitches for the last 7 days
+recent_pitches <- pitches %>%
+  inner_join(game_lookup %>%
+               filter(game_date >= start_date & game_date <= end_date),
+             by = "game_id")
+
+# Pitcher usage summary for the last 7 days
+pitcher_summary <- recent_pitches %>%
+  group_by(pitcher_id) %>%
+  summarize(n_games = n_distinct(game_id),
+            n_pitches = n(),
+            velo_avg = mean(velo)) %>%
+  left_join(player_lookup, by = "player_id") %>%
+  select(pitcher_id, name, n_games, n_pitches, velo_avg)
+
+print(pitcher_summary)
+
+# Pitch count matrix by pitcher and date for the last 7 days
+pitch_count_matrix <- recent_pitches %>%
+  pivot_wider(names_from = game_date, values_from = pitch_no, values_fill = 0) %>%
+  select(pitcher_id, everything())
+
+# Filter pitchers for team_id = 120
+team_id_filter <- game_lookup %>%
+  filter(home_team_id == 120) %>%
+  pull(game_id)
+
+filtered_pitchers <- pitches %>%
+  filter(game_id %in% team_id_filter)
+
+# Calculate total pitch counts for the last 3 and 7 days
+last_3_days_pitch_count <- filtered_pitchers %>%
+  filter(game_date >= (end_date - 3) & game_date < end_date) %>%
+  group_by(pitcher_id) %>%
+  summarize(Total_Pitch_Count_Last_3_Days = n())
+
+last_7_days_pitch_count <- filtered_pitchers %>%
+  filter(game_date >= start_date & game_date <= end_date) %>%
+  group_by(pitcher_id) %>%
+  summarize(Total_Pitch_Count_Last_7_Days = n())
+
+# Add total pitch counts to the matrix
+pitch_count_matrix <- pitch_count_matrix %>%
+  left_join(last_3_days_pitch_count, by = "pitcher_id") %>%
+  left_join(last_7_days_pitch_count, by = "pitcher_id")
+
+print(pitch_count_matrix)
+```
+
