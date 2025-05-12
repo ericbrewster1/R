@@ -1,0 +1,94 @@
+---
+title: "HW1STA4273"
+author: "Eric Brewster"
+date: "2025-02-07"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r 3.2}
+u <- runif(1000)
+i <- which(u >= 0.5)
+x <- c(-log(2 * u[i] - 1), log(2 * u[-i]))
+a <- c(0, qexp(ppoints(100), rate = 1))
+b <- -rev(a)
+
+hist(x, breaks = 25, prob = TRUE, ylim = c(0, 0.5))
+lines(a, 0.5 * exp(-a))
+lines(b, 0.5 * exp(b))
+```
+
+
+```{r 3.4}
+n <- 1000
+sigma <- seq(1, 5, length = 9)
+
+par(mfrow = c(3, 3))
+for(i in 1:length(sigma)) {
+  u <- runif(n)
+  x <- sigma[i] * sqrt(-2 * log(u))
+  hist(x, 25, prob = TRUE, main = c("sigma", sigma[i]))
+  abline(v = sigma[i], lwd = 2)
+}
+
+```
+
+Close to mode in all 9 histograms.
+
+
+
+```{r 3.5}
+p <- c(0.1, 0.2, 0.2, 0.2, 0.3)
+cdfDiscrete <- cumsum(p) # sum up each probability
+x <- numeric(1000)
+
+for(i in 1:1000) {
+  x[i] <- sum(as.integer(runif(1) > cdfDiscrete))
+}
+
+rbind(table(x)/1000, p)
+```
+Close to theoretical probabilities.
+
+
+
+```{r 3.11}
+n <- 1000
+p <- 0.75
+mu <- sample(c(0, 3), size = 1000, replace = TRUE, prob = c(p, 1 - p))
+x <- rnorm(n, mu, 1)
+
+hist(x, breaks = 25, prob = TRUE)
+y <- sort(x)
+fy <- p * dnorm(y) + (1 - p) * dnorm(y, 3, 1)
+lines(y, fy)
+
+par(mfrow = c(3, 3))
+p <- seq(0.1, 0.9, length = 9)
+for(i in 1:9) {
+  mu <- sample(c(0, 3), size = 1000, replace = TRUE, prob = c(p[i], 1 - p[i]))
+  x <- rnorm(n, mu, 1)
+  hist(x, breaks = 25, prob = TRUE, main = p[i])
+  y <- sort(x)
+  fy <- p[i] * dnorm(y) + (1 - p[i]) * dnorm(y, 3, 1)
+  lines(y, fy)
+}
+```
+
+
+```{r 3.12}
+lambda <- rgamma(1000, 4, 2)
+x <- rexp(1000, rate = lambda)
+head(x)
+```
+
+
+
+
+
