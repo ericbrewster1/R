@@ -1,0 +1,118 @@
+---
+title: "Assignment7STA3100"
+author: "Eric Brewster"
+date: "2023-10-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+
+```{r Question 1}
+library(tidyverse)
+library(nycflights13)
+worst48 <- flights %>% 
+  group_by(origin, year, month, day, hour) %>%
+  summarise(dep_delay = mean(dep_delay, na.rm = TRUE)) %>%
+  ungroup() %>%
+  arrange(desc(dep_delay)) %>%
+  head(48)
+worst_flights <- weather %>%
+  right_join(worst48, by = c("origin", "year", "month", "day", "hour")) %>%
+  select(month, day, hour, temp, wind_speed, precip, dep_delay)
+worst_flights %>%
+  ggplot(aes(precip, dep_delay)) + geom_point() + geom_smooth()
+worst_flights %>%
+  ggplot(aes(wind_speed, dep_delay)) + geom_point() + geom_smooth()
+```
+There does not seem to be a significant correlation between delays and precipitation or wind speed
+
+```{r Question 2}
+airport_locations <- nycflights13::airports %>%
+  select(faa, lat, lon)
+
+flights %>%
+  select(year:day, hour, origin, dest) %>%
+  left_join(
+    airport_locations,
+    by = c("origin" = "faa")
+  ) %>%
+  left_join(
+    airport_locations,
+    by = c("dest" = "faa")
+  )
+```
+
+It is easier to rename after the join. You do not have to save the values as variables to do a join. You merely add one line of code in the join.
+
+```{r Question 3}
+average_delay <- flights %>%
+  group_by(dest) %>%
+  summarise(delay = mean(arr_delay, na.rm = TRUE)) %>%
+  inner_join(airports, by = c(dest = "faa"))
+
+average_delay %>%
+  ggplot(aes(lon, lat, color = delay)) +
+  borders("state") +
+  geom_point() +
+  coord_quickmap()
+```
+
+
+```{r Question 5}
+mdy("January 1, 2010")
+ymd("2015-Mar-07")
+dmy("06-Jun-2017")
+mdy(c("August 19 (2015)", "July 1 (2015)"))
+mdy("12/30/14")
+parse_time("1705", "%H%M")
+parse_time("11:15:10 PM", "%H:%M:%OS %p")
+```
+
+```{r Question 6}
+calculate_age <- function(birthdate) {
+  birthdate <- ymd(birthdate)
+  current_date <- Sys.Date()
+  age <- as.numeric(difftime(current_date, birthdate, units = "weeks")) / 52.1775
+  age <- floor(age)
+  return(age)
+}
+
+birthday <- "2003-03-18"
+age <- calculate_age(birthday)
+age
+```
+
+
+```{r Question 7}
+boxplot(islands, main="Boxplot of Island Areas (Original Scale)")
+
+boxplot(log(islands), main="Boxplot of Island Areas (Log Scale)")
+
+dotchart(islands, main="Dot Chart of Island Areas")
+
+```
+Yes, a log transformation is needed to better display the dot chart.
+
+```{r Question 8}
+plot(pressure$temperature, pressure$pressure, 
+     xlab="Temperature", ylab="Pressure",
+     main="Scatterplot of Temperature vs. Pressure")
+residuals <- with(pressure, pressure - (0.168 + 0.007 * temperature)^(20/3))
+qqnorm(residuals)
+qqline(residuals)
+transformed_pressure <- pressure$pressure^(3/20)
+plot(pressure$temperature, transformed_pressure,
+     xlab="Temperature", ylab="Transformed Pressure",
+     main="Scatterplot of Temperature vs. Transformed Pressure")
+transformed_residuals <- transformed_pressure - (0.168 + 0.007 * pressure$temperature)^(20/3)
+qqnorm(transformed_residuals)
+qqline(transformed_residuals)
+
+```
+
+8. A linear relationship is not evident from the first graph from 8a, but is far more evident in the 8c graph.

@@ -1,0 +1,124 @@
+---
+title: "Assignment8STA3100"
+author: "Eric Brewster"
+date: "2023-11-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+
+```{r}
+setwd("C:\\Users\\14048\\Downloads")
+library(tidyverse)
+library(lubridate)
+circ <- read_csv("Charm_City_Circulator_Ridership.csv")
+# convert dates
+circ <- mutate(circ, date = mdy(date))
+# change colnames for reshaping
+colnames(circ) <- colnames(circ) |>
+  str_replace("Board", ".Board") |>
+  str_replace("Alight", ".Alight") |>
+  str_replace("Average", ".Average")
+# make long
+long <- pivot_longer(circ, c(starts_with("orange"), starts_with("purple"), 
+                             starts_with("green"), starts_with("banner")), 
+                     names_to = "var", values_to = "number",)
+# separate
+long <- separate(long, var, into = c("route", "type"), 
+                 sep = "[.]")
+## take just average ridership per day
+avg <- filter(long, type == "Average")
+avg <- filter(avg, !is.na(number))
+# separate
+type_wide <- spread(long, type, value = number)
+head(type_wide)
+```
+
+```{r Question 1a}
+ggplot(data = avg, aes(x = date, y = number, color = route)) +
+  geom_point() +                          
+  labs(title = "Average Ridership by Date",
+       x = "Date",
+       y = "Average Ridership")
+```
+
+
+```{r Question 1b}
+ggplot(data = avg, aes(x = date, y = number, color = route)) +
+  geom_point() +
+  geom_smooth(aes(group = route), method = "loess", formula = y ~ x, color = "black", se = FALSE) +
+  labs(title = "Average Ridership by Date",
+       x = "Date",
+       y = "Average Ridership")
+```
+
+
+```{r Question 1c}
+ggplot(data = avg, aes(x = date, y = number, color = day)) +
+  geom_point() +                          
+  labs(title = "Average Ridership by Date",
+       x = "Date",
+       y = "Average Ridership")
+```
+
+
+```{r Question 2}
+pal <- c("blue", "darkgreen","orange","purple")
+ggplot(avg, aes(x = date, y = number, color = route)) +
+  geom_point() +
+  scale_color_manual(values = pal) +
+  labs(title = "Average Ridership by Date",
+       x = "Date",
+       y = "Average Ridership")
+```
+
+
+```{r Question 3}
+ggplot(avg, aes(x = date, y = number)) +
+  geom_line(aes(color = route), size = 0.01) +
+  facet_wrap(~route, scales = "free_y", ncol = 2) +
+  labs(title = "Average Ridership by Date (One Panel per Route)",
+       x = "Date",
+       y = "Average Ridership",
+       color = "Route")
+```
+
+
+```{r Question 4}
+ggplot(avg, aes(x = date, y = number, color = route)) +
+  geom_point() +
+  facet_wrap(~day, ncol = 3) +
+  scale_color_manual(values = pal) +
+  labs(title = "Average Ridership by Date (Separate Panels by Day of the Week)",
+       x = "Date",
+       y = "Average Ridership",
+       color = "Route")
+```
+
+
+```{r Question 5}
+ggplot(avg, aes(x = date, y = number, color = route)) +
+  geom_line(size = 0.25) +
+  labs(title = "Average Ridership by Date",
+       x = "Year",
+       y = "Number of People") +
+  scale_color_manual(values = pal) +
+  theme_bw() +
+  theme(text = element_text(size = 20))
+```
+
+
+```{r Question 6}
+orangeData <- long %>% filter(route == "orange")
+ggplot(orangeData, aes(x = date, y = number)) + 
+  geom_line(aes(linetype = type), colour = "orange") +
+  scale_linetype_manual(values = c(Alightings = "dashed", 
+                                   Boardings = "dashed", 
+                                   Average = "solid"))
+```
+

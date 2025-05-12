@@ -1,0 +1,125 @@
+---
+title: "Assignment10SA3100"
+author: "Eric Brewster"
+date: "2023-12-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+library(forcats)
+library(ggplot2)
+data("gss_cat")
+```
+
+
+```{r Question 1a}
+most_common_relig <- levels(gss_cat$relig)[which.max(table(gss_cat$relig))]
+most_common_relig
+least_common_partyid <- levels(gss_cat$partyid)[which.min(table(gss_cat$partyid))]
+least_common_partyid
+```
+The most common religion is Protestant, and the least common partyid is Don't know.
+
+```{r Question 1b}
+marital_levels <- levels(gss_cat$marital)[order(-table(gss_cat$marital))]
+marital_levels
+```
+
+
+```{r Question 1c}
+rincome_levels <- c("Lt $1000", "$1000 to 2999", "$3000 to 3999", "$4000 to 4999", "$5000 to 5999",
+                    "$6000 to 6999", "$7000 to 7999", "$8000 to 9999", "$10000 - 14999", "$15000 - 19999",
+                    "$20000 - 24999", "$25000 or more", "No answer", "Don't know", "Refused", "Not applicable")
+
+gss_cat$rincome <- fct_relevel(gss_cat$rincome, rincome_levels)
+
+gss_cat$rincome <- fct_collapse(gss_cat$rincome,
+                                "NA" = c("No answer", "Don't know", "Refused", "Not applicable"))
+
+levels(gss_cat$rincome)
+```
+
+
+```{r Question 1d}
+gss_cat$rincome <- fct_recode(gss_cat$rincome,
+                              "Lt $1k" = "Lt $1000",
+                              "$1-3k" = "$1000 to 2999",
+                              "$3-4k" = "$3000 to 3999",
+                              "$4-5k" = "$4000 to 4999",
+                              "$5-6k" = "$5000 to 5999",
+                              "$6-7k" = "$6000 to 6999",
+                              "$7-8k" = "$7000 to 7999",
+                              "$8-9k" = "$8000 to 9999",
+                              "$10-15k" = "$10000 - 14999",
+                              "$15-20k" = "$15000 - 19999",
+                              "$20-25k" = "$20000 - 24999",
+                              "$25k or more" = "$25000 or more")
+levels(gss_cat$rincome)
+```
+
+
+```{r Question 1e}
+ggplot(gss_cat, aes(x = rincome)) + geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Income Distribution", x = "Income Levels", y = "Frequency")
+```
+
+
+```{r Question 1f}
+gss_cat$relig <- reorder(gss_cat$relig, gss_cat$tvhours, FUN = function(x) mean(x, na.rm = TRUE))
+ggplot(gss_cat, aes(x = tvhours, y = relig)) +
+  geom_point(stat = "summary", fun = "mean") +
+  theme(axis.text.y = element_text(hjust = 1))
+```
+
+
+```{r Question 2a}
+set.seed(88970542)
+toss_matrix <- matrix(sample(c("H", "T"), 100 * 2500, replace = TRUE), ncol = 2500)
+```
+
+
+```{r Question 2b}
+X_bar <- apply(toss_matrix, 2, function(replication) max(rle(replication)$lengths))
+mu_hat <- mean(X_bar)
+se_mu_hat <- sd(X_bar) / sqrt(length(X_bar))
+ci <- mean(X_bar) + c(-1, 1) * qt(0.975, df = length(X_bar) - 1) * se_mu_hat
+mu_hat
+ci
+```
+
+
+```{r Question 2c}
+p_hat <- mean(X_bar >= 5)
+se_p_hat <- sqrt(p_hat * (1 - p_hat) / length(X_bar))
+se_p_hat
+```
+
+
+```{r Question 3a}
+m_values <- c(50, 100, 200, 400)
+run_lengths_matrix <- matrix(0, ncol = length(m_values), nrow = 2500)
+colnames(run_lengths_matrix) <- m_values
+
+for (i in seq_along(m_values)) {
+  run_lengths_matrix[, i] <- apply(matrix(sample(c("H", "T"), m_values[i] * 2500, replace = TRUE), ncol = 2500), 2, function(replication) max(rle(replication)$lengths))
+}
+
+head(run_lengths_matrix, 5)
+```
+
+
+```{r Question 3b}
+percentiles <- c(0.05, 0.25, 0.50, 0.75, 0.95)
+percentile_estimates <- apply(run_lengths_matrix, 2, quantile, probs = percentiles)
+percentile_estimates
+```
+
+
+```{r Question 3c}
+boxplot(run_lengths_matrix, names = m_values)
+```
+

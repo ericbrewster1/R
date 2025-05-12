@@ -1,0 +1,122 @@
+---
+title: "Assignment3STA3100"
+author: "Eric Brewster"
+date: "2023-09-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Question 1}
+set.seed(3100)
+variables <- rexp(100, rate = 1)
+M <- matrix(variables, nrow = 10, ncol = 10)
+M
+```
+
+
+```{r Question 1a}
+transposeM <- t(M)
+transposeM
+```
+
+
+```{r Question 1b}
+MtransposeM <- transposeM %*% M
+MtransposeM
+```
+
+
+```{r Question 1c}
+addIdentity <- 2.5 * M + 5.2 * diag(10)
+addIdentity
+```
+
+
+```{r Question 1d}
+inverseM <- solve(M)
+inverseM
+```
+
+
+```{r Question 1e}
+meanM = mean(M)
+meanM
+```
+
+
+```{r Question 1f}
+rowMax <- which.max(rowSums(M))
+rowMax
+```
+
+
+```{r Question 1g}
+colMeans(M>1)* 100
+```
+
+
+```{r Question 1h}
+rownames(M) <- paste("n", 1:10, sep = "")
+colnames(M) <- paste("v", 1:10, sep = "")
+M
+```
+
+
+```{r Question 1i}
+subM <- M[c("n3", "n4", "n5"), (c("v1", "v3", "v5", "v6", "v7", "v8", "v9", "v10"))]
+subM
+```
+
+
+```{r Question 1j}
+L <- diag(diag(M))
+L
+```
+
+
+```{r Question 1k}
+L <- rbind(L, rep(0, ncol(L)))
+L
+```
+
+
+```{r Question 1l}
+H <- M[ ,ncol(M)] %*% M[nrow(M), ]
+H
+```
+
+
+```{r Question 2a}
+margContTable <- margin.table(UCBAdmissions, margin = c(1, 2))
+margContTable <- addmargins(margContTable)
+margContTable
+```
+
+
+```{r Question 2b}
+propTable <- prop.table(margContTable, margin = 2) * 200
+propTable <- round(propTable, digits = 1)
+propTable
+```
+For whom is the admission rate higher overall, males or females?
+The admission rate is significantly higher (14.1 percent) for males than females.
+
+
+```{r Question 2c}
+gendDep <- ftable(prop.table(UCBAdmissions, margin = c(1, 2))) * 100
+gendDep <- round(gendDep, digits = 1)
+gendDep
+```
+How do these results compare to what you found in part (b)?
+Departments A and B show the same outcome where a much higher percentage of males are admitted, as do departments C and E where far more females are rejected than males.
+
+
+```{r Question 2d}
+chisq.test(marginSums(UCBAdmissions, c("Dept", "Gender")))
+```
+What do you conclude?
+Because the p-value is so low, there is a statistically significant connection between gender and department choice.
+

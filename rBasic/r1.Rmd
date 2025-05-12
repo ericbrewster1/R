@@ -1,0 +1,64 @@
+---
+title: "Assignment1STA3100"
+author: "Eric Brewster"
+date: "2023-08-28"
+output: html_document
+---
+
+
+```{r Question 1}
+170166719 %% 31079
+```
+
+
+```{r Question 2}
+pi * (3:100)^2
+```
+
+
+```{r Question 3}
+2000 * (1.03)^(1:30) - 2000
+```
+
+
+```{r Question 4}
+rep(0:4, each = 5)
+rep(seq(1:5), 5)
+rep(seq(1:5), each = 5) + rep(0:4, times = 5)
+```
+
+
+```{r Question 5}
+sum(1.08^(1:100))
+```
+
+
+```{r Question 6}
+seq1 <- 2^(1:15)
+seq2 <- (1:15)^3
+seq1larger <- seq1 > seq2
+seq3 <- seq1[seq1larger]
+seq3
+```
+
+
+```{r Question 7}
+solar.radiation <- c(11.1, 10.6, 6.3, 8.8, 10.7, 11.2, 8.9, 12.2)
+mean(solar.radiation)
+median(solar.radiation)
+max(solar.radiation) - min(solar.radiation)
+var(solar.radiation)
+sr10 <- solar.radiation + 10
+mean(sr10)
+median(sr10)
+max(sr10) - min(sr10)
+var(sr10)
+#Mean and median both increase by 10, but range and variance remain the same
+srm2 <- solar.radiation * -2
+mean(srm2)
+median(srm2)
+max(srm2) - min(srm2)
+var(srm2)
+#Mean and median are multiplied by -2 from solar.radiation, range is doubled, and variance is quadrupled.
+```
+
