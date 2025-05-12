@@ -1,0 +1,261 @@
+---
+title: "In-Class Assignment 4"
+author: "Eric Brewster"
+date: "4/5/2024"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Part 1 - NFL Combine 2014 Data
+
+## Part 1a Read in Data, Fit OLS Regression, Obtain Residual Plots and Breusch-Pagan Test
+```{r part1a}
+nflcomb <- read.csv("http://www.stat.ufl.edu/~winner/sta4210/mydata/nfl_combine.csv",
+       header=TRUE)
+attach(nflcomb); names(nflcomb)
+
+nfl.mod1 <- lm(Weight ~ Height + ArmLng + HandLng)
+summary(nfl.mod1)
+
+par(mfrow=c(2,2))
+plot(resid(nfl.mod1) ~ predict(nfl.mod1), pch=16)
+abline(h=0, col="red", lwd=2)
+plot(resid(nfl.mod1) ~ Height, pch=16)
+abline(h=0, col="red", lwd=2)
+plot(resid(nfl.mod1) ~ ArmLng, pch=16)
+abline(h=0, col="red", lwd=2)
+plot(resid(nfl.mod1) ~ HandLng, pch=16)
+abline(h=0, col="red", lwd=2)
+par(mfrow=c(1,1))
+
+library(lmtest)
+bptest(nfl.mod1, studentize=FALSE)
+```
+
+
+## Part 1b - Estimated iteratively reweighted least squares (IRLS) with:
+
+$$ \sigma_i^2 = \sigma^2\mu_i^{2\delta} \qquad \Longrightarrow \qquad \log\left(\sigma_i^2\right)=\log\left(\sigma^2\right)+\delta\log\left(\mu_i^2\right)$$
+```{r part1b}
+#### Matrix form (using lm for log(e^2) , log(y-hat^2) regression) ###########
+
+n <- length(Weight)
+X0 <- rep(1,n)
+X <- as.matrix(cbind(X0,Height,ArmLng,HandLng))
+Y <- as.matrix(Weight)
+p <- ncol(X)
+
+#### Fit original regression, and regress functions of |e| on Y-hat
+
+b.ols <- solve(t(X) %*% X) %*% t(X) %*% Y           # b=(X'X)^(-1)X'Y
+mse.o <- (t(Y-X%*%b.ols) %*% (Y-X%*%b.ols))/(n-p)   # MSE=(Y-Xb)"(Y-Xb)/(n-p)
+s2.b.ols <- mse.o[1,1]*solve(t(X) %*% X)            # s2{b}=MSE*(X'X)^(-1)
+s.b.ols <- sqrt(diag(s2.b.ols))                     # s{b}=sqrt(diag(b}}
+t.b.ols <- b.ols/s.b.ols                            # t=b/s{b}
+p.b.ols <- 2*(1-pt(abs(t.b.ols), n-p))              # P-value
+
+ols.out <- cbind(b.ols, s.b.ols, t.b.ols, p.b.ols)
+colnames(ols.out) <- c("b_ols", "Std. Error", "t*", "P(>|t*|)")
+rownames(ols.out) <- c("Intercept", "Height", "Arm Length", "Hand Length")
+round(ols.out,4)
+
+#### Plot  log(e^2) vs log(Y-hat^2)
+yhat.ols <- X %*% b.ols
+e.ols <- Y - yhat.ols
+
+plot(log(e.ols^2) ~ log(yhat.ols^2), pch=16)
+abline(lm(log(e.ols^2) ~ log(yhat.ols^2)))
+
+cor(log(e.ols^2) , log(yhat.ols^2))
+
+# Fit regression of log(e^2) on log(Y-hat^2)
+e.reg.ols <- lm(log(e.ols^2) ~ log(yhat.ols^2))
+summary(e.reg.ols)
+s2.ols <- exp(predict(e.reg.ols))         # Predicted s_i^2
+w.ols <- 1/s2.ols                         # WLS weights= 1/s^2
+
+## Begin iterations to obtain WLS estimator b_w
+b.old <- b.ols                       # Start iterations with OLS estimator
+wm.old <- as.matrix(diag(w.ols))     # W = diagonal matrix with w_i=1/s_i^2
+b.diff <- 100                        # Set high starting difference 
+num.iter <- 0                        # Counter for number of iterations
+
+# Keep iterating until (b_new-b_old)'(b_new-b_old) < .00001
+while (b.diff > 0.00001) {
+   num.iter <- num.iter+1           # Increment number of iterations
+   # b_new = (X'WX)^(-1)X'WY
+   b.new <- solve(t(X) %*% wm.old %*% X) %*% t(X) %*% wm.old %*% Y
+   yhat.new <- X %*% b.new        # Yhat_new = Xb_new
+   e.new <- Y - yhat.new          # new e = Y-Yhat_new
+   # Create new weight matrix from regression of log(e^2) on log(yhat_new^2)
+   wm.new <- as.matrix(diag(1/exp(predict(lm(log(e.new^2)~log(yhat.new^2))))))
+   b.diff <- sum((b.new-b.old)^2) # sum of squared differences of b_new,b_old
+   b.old <- b.new                 # b.old is assigned b.new
+   wm.old <- wm.new               # Old weight matrix is assigned new weight matrix
+}
+
+# End of loop
+num.iter       # Number of iterations needed
+
+# Apply wm.new to get b.new (probably not necessary)
+b.new <- solve(t(X) %*% wm.new %*% X) %*% t(X) %*% wm.new %*% Y
+b.wls <- b.new          # Obtain b.wls as result from iterative process
+wm.wls <- wm.new        # Obtain WLS matrix from iterative process
+
+## MSE_wls = (Y-Xb-w)'W(Y-Xb_w)
+mse.w <- (t(Y-X%*%b.wls) %*% wm.wls %*% (Y-X%*%b.wls))/(n-p)
+
+# s2{b_w} = MSE*(X'WX)^(-1)
+s2.b.wls <- mse.w[1,1]*solve(t(X) %*% wm.wls %*% X)
+s.b.wls <- sqrt(diag(s2.b.wls))          # s{b_w} = sqrt(diag(s2{b_w}))
+t.b.wls <- b.wls/s.b.wls                 # t = b_w/s{b}
+p.b.wls <- 2*(1-pt(abs(t.b.wls), n-p))   # P-value
+
+wls.out <- cbind(b.wls, s.b.wls, t.b.wls, p.b.wls)
+colnames(wls.out) <- c("b_wls", "Std. Error", "t*", "P(>|t*|)")
+rownames(wls.out) <- c("Intercept", "Height", "Arm Length", "Hand Length")
+
+round(ols.out, 4)
+round(wls.out, 4)
+```
+
+
+### Fit Maximum Likelihood Estimates w/ gls function in nlme package
+
+
+```{r part1c}
+
+
+## Using gls fuction in nlme package
+
+library(nlme)
+gls.mod.ols <- gls(Weight ~ Height+ArmLng+HandLng, method="ML")
+summary(gls.mod.ols)
+
+## Fit variance function model with s{e_i} = sigma*(mu_i^delta)
+gls.mod.wls <- gls(Weight ~ Height+ArmLng+HandLng, method="ML",
+    weights=varPower(form = ~fitted(.)))
+summary(gls.mod.wls)
+
+anova(gls.mod.ols,gls.mod.wls)
+
+summary(predict(gls.mod.wls))
+```
+
+$$ \hat{\sigma}_i \quad = \quad \hat{\sigma}\hat{\mu}_i^{\hat{\delta}}\quad  = \quad .00055 \hat{\mu}_i^{1.98}   $$
+###End of Part 1 and Begin of Part 2
+
+Detach nflcomb and read in Bollywood box office data
+
+```{r part2a}
+
+detach(nflcomb)
+
+bolly1 <- read.csv(
+    "http://www.stat.ufl.edu/~winner/data/bollywood_boxoffice2.csv")
+attach(bolly1); names(bolly1)
+head(bolly1)
+tail(bolly1)
+```
+
+## Part2b - Fit OLS model relating Gross Revenues to Budget and Plot Model and Residuals
+
+```{r part2b}
+Y1 <- Gross/100
+X1 <- Budget/100
+
+bolly.mod1 <- lm(Y1 ~ X1)
+summary(bolly.mod1)
+anova(bolly.mod1)
+
+plot(Y1 ~ X1, pch=16, main="Gross vs Budget")
+abline(bolly.mod1, col="blue", lwd=2)
+
+plot(resid(bolly.mod1)~predict(bolly.mod1), pch=16, main="Residuals vs Predicted Values")
+abline(h=0, col="red", lwd=2)
+
+```
+
+### Part 2c - Matrix form
+
+```{r part2c}
+n <- length(Y1)
+X.mat <- cbind(rep(1, n), X1)
+XpX <- t(X.mat) %*% X.mat
+XpY <- t(X.mat) %*% Y1
+betahat <- solve(XpX) %*% XpY
+
+J_n <- matrix(rep(1/n,n^2), ncol=n)
+I <- diag(n)
+P <- X.mat %*% solve(XpX) %*% t(X.mat)
+
+SSE <- t(Y1) %*% (I-P) %*% Y1
+s2 <- SSE/(n-2)
+
+V.betahat <- s2[1,1] * solve(XpX)
+SE.betahat <- sqrt(diag(V.betahat))
+t.betahat <- betahat/SE.betahat
+p.betahat <- 2*(1-pt(abs(t.betahat),n-2))
+
+ols.out <- cbind(betahat, SE.betahat, t.betahat, p.betahat)
+colnames(ols.out) <- c("Estimate", "Std Err", "t", "P(>|t|)")
+rownames(ols.out) <- c("Intercept", "Budget")
+round(ols.out, 5)
+```
+
+## Part 2d - Robust (to heteroskedasticity) Standard Errors (Chapter 11, Slide 8)
+
+```{r part2d}
+library(lmtest)
+bptest(bolly.mod1, studentize=FALSE)
+
+E2 <- diag(resid(bolly.mod1)^2)
+
+V.betahat.W <- solve(XpX) %*% t(X.mat) %*% E2 %*% X.mat %*% solve(XpX)
+SE.betahat.W <- sqrt(diag(V.betahat.W))
+t.betahat.W <- betahat/SE.betahat.W
+p.betahat.W <- 2*(1-pt(abs(t.betahat.W),n-2))
+
+beta.out.W <- cbind(betahat, SE.betahat.W, t.betahat.W, p.betahat.W)
+colnames(beta.out.W) <- c("Estimate", "Robust Std Err", "t", "P(>|t|)")
+rownames(beta.out.W) <- c("Intercept", "Budget")
+round(beta.out.W, 5)
+
+# install.packages("sandwich")
+library(sandwich)
+library(lmtest)
+
+coeftest(bolly.mod1, vcov=vcovHC(bolly.mod1, type = "HC0"))
+## type=:
+## const => E2 = diag{s^2}  (OLS)
+## HC0 => E2 = diag{e_i^2}
+## HC1 => E2 = (n/(n-p))diag{e_i^2}
+## HC2 => E2 = diag(e_i^2/(1-h_ii))
+## HC3 => E2 = diag(e_i^2/(1-h_ii)^2)
+## HC4 => E2 = diag(e_i^2/(1-h_ii)^delta_i)   with delta_i = min(4, h_ii/hbar)   with hbar = p/n
+```
+
+## Part 2e - Least Absolute Deviations Regression and Plot Data, OLS, LAD, Lowess
+
+```{r part2e}
+
+library(quantreg)
+bolly.lad <- rq(Y1 ~ X1,0.5)
+summary(bolly.lad)
+
+## Plot Data and Regression Equations
+# win.graph(height=5.5, width=7.0)
+# quartz(height=5.5, width=7.0)
+plot(Y1 ~ X1, pch=19, xlab="log(Budget)", ylab="log(Gross)",
+  main="Bollywood Movie Revenues (Y) and Budgets (X)", cex=0.65)
+abline(bolly.mod1, col="blue", lwd=2)
+abline(bolly.lad, col="darkred", lwd=2)
+lines(lowess(Y1, X1), col="darkgreen", lwd=2)
+legend("topleft", c("Data", "OLS", "LAD", "Lowess"), pch=c(19,NA,NA,NA),
+   col=c("black","blue","darkred", "darkgreen"),  lwd=c(NA,2,2,2))
+
+```
+

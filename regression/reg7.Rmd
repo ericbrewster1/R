@@ -1,0 +1,154 @@
+---
+title: "Exam3TakeHome"
+author: "Eric Brewster"
+date: "2024-04-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r data}
+wnba <- read.csv(
+ "http://users.stat.ufl.edu/~winner/data/wnba_20102019_ATS_OU2.csv")
+head(wnba)
+
+wnba$teamPred <- (wnba$OU-wnba$tmSprd)/2
+
+wnba.tmyr <- wnba[wnba$team=="MIN" & wnba$year==2010, 
+      c("team", "year","teamPts","home","teamPred")]
+wnba.tmyr
+attach(wnba.tmyr);
+```
+
+
+```{r models}
+mod1 <- lm(teamPts ~ teamPred, data = wnba.tmyr[1:33, ])
+mod2 <- lm(teamPts ~ teamPred + home, data = wnba.tmyr[1:33, ])
+mod3 <- lm(teamPts ~ teamPred + home + (teamPred * home), data = wnba.tmyr[1:33, ])
+```
+
+
+```{r model 1}
+(SSE1 <- sum(mod1$residuals^2))
+
+n <- length(mod1$residuals)
+p <- length(coef(mod1))  # Number of parameters including intercept
+(MSE1 <- SSE1 / (n - p))
+
+(R_squared1 <- summary(mod1)$r.squared)
+```
+
+
+```{r model 1}
+(AIC_value1 <- AIC(mod1))
+
+(AICp <- 33 * log(SSE1) - 33 * log(33) + 4)
+```
+
+
+```{r model 1}
+(BIC_value1 <- BIC(mod1))
+
+# Compute SBCp
+(SBCp <- 33 * log(SSE1) - 33 * log(n) + log(n) * 2)
+
+```
+
+
+```{r model 2}
+(SSE2 <- sum(mod2$residuals^2))
+
+n <- length(mod2$residuals)
+p <- length(coef(mod2))  # Number of parameters including intercept
+(MSE2 <- SSE2 / (n - p))
+
+(R_squared2 <- summary(mod2)$r.squared)
+
+(AIC_value2 <- AIC(mod2))
+
+(BIC_value2 <- BIC(mod2))
+```
+
+
+
+```{r model 3}
+(SSE3 <- sum(mod3$residuals^2))
+
+n <- length(mod3$residuals)
+p <- length(coef(mod3)) # Number of parameters including intercept
+(MSE3 <- SSE3 / (n - p))
+
+(R_squared3 <- summary(mod3)$r.squared)
+
+(AIC_value3 <- AIC(mod3))
+
+(BIC_value3 <- BIC(mod3))
+```
+
+
+```{r question2}
+anova(mod1, mod3)
+```
+
+
+```{r question 3}
+library(car)
+durbinWatsonTest(mod1)
+
+```
+
+
+
+```{r q4}
+n <- length(teamPts) - 1
+SSE.mod1 <- deviance(mod1)
+e.mod1 <- residuals(mod1)
+
+DW1.mod1 <- sum(diff(e.mod1)^2)       # sum_2^n((e_[t]-e_[t-1])^2)
+(DW.mod1 <- DW1.mod1/SSE.mod1)
+CO1.mod1 <- sum(e.mod1[1:(n-1)]*e.mod1[2:n])   #sum_2^n(e_[t-1]*e_[t])
+CO2.mod1 <- sum(e.mod1[1:(n-1)]^2)             #sum_2^n(e_t-1]^2)
+(COr.mod1 <- CO1.mod1/CO2.mod1)
+
+CO.Yt <- teamPts[2:n] - (COr.mod1 * teamPts[1:(n-1)]) 
+CO.Xt <- teamPred[2:n] - (COr.mod1 * teamPred[1:(n-1)])
+
+CO.mod1t <- lm(CO.Yt ~ CO.Xt)         # Fit Regression model
+(CO.mod1t.sum <- summary(CO.mod1t))   # Save summary for coefs, SEs 
+anova(CO.mod1t)
+CO.e.1t <- residuals(CO.mod1t)        # Save residuals
+CO.SSE.1t <- deviance(CO.mod1t)       # Save SSE
+CO.dfE.1t <- df.residual(CO.mod1t)    # Save df_Error = n-2
+dwtest(CO.Yt ~ CO.Xt)
+
+(CO.b0.1o <- coef(CO.mod1t.sum)[1,1]/(1-COr.mod1))
+(CO.b1.1o <- coef(CO.mod1t.sum)[2,1])
+
+# Original scale:  s(b0_o} = s{b0_t}/(1-CO.r)  s{b1_o} = s{b1_t}
+(CO.s.b0.1o <- coef(CO.mod1t.sum)[1,2]/(1-COr.mod1))
+(CO.s.b1.1o <- coef(CO.mod1t.sum)[2,2])
+
+(CO.X.next <- 72.25)                          
+# Compute residual for Period n in original scale
+(CO.e.n <- teamPts[n] - (CO.b0.1o + CO.b1.1o * teamPred[n]))
+# Forecast for period n+1 - b0+b1*X_[n+1]+r*e_[n]  in original scale
+(CO.F.next <- CO.b0.1o + CO.b1.1o * CO.X.next + COr.mod1*CO.e.n)
+
+# Transform X_[n+1]' = X_[n+1] - CO.r*X_[n]
+(CO.X.next.t <- CO.X.next - COr.mod1*teamPred[n])
+# Variance of forecast in transformed scale
+(CO.F.var <- (CO.SSE.1t/CO.dfE.1t) * 
+     (1+1/(n-1)+(CO.X.next.t-mean(CO.Xt))^2/sum((CO.Xt-mean(CO.Xt))^2)))
+# 95% Prediction Interval
+(CO.F.next + qt(c(.025,.975),n-3) * sqrt(CO.F.var))
+```
+
+
+
+
+
+
+

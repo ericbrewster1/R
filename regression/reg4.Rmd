@@ -1,0 +1,85 @@
+---
+title: "Exam2"
+author: "Eric Brewster"
+date: "2024-02-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r prep}
+RFL <- c(25, 24, 23, 25, 22, 24, 26, 25, 24, 23, 24, 25, 24, 26, 25, 24, 26, 24, 23, 24)
+LHL <- c(17, 17, 17, 18, 18, 17, 20, 16, 17, 18, 17, 17, 17, 18, 17, 18, 18, 17, 17, 19)
+Y <- c(171,	170, 167,	180, 168, 170, 192, 175, 170, 164, 169, 170, 173,	182, 174, 166, 187, 173, 160, 172)
+```
+
+
+```{r 1}
+model <- lm(Y ~ RFL + LHL)
+summary(model)
+(fitted_equation <- summary(model)$coefficients)
+(first_fitted_value <- fitted(model)[1])
+(residual <- resid(model)[1])
+```
+
+```{r 2}
+(SSE <- sum(resid(model)^2))
+(MSE <- SSE / (length(resid(model)) - length(coefficients(model))))
+```
+
+
+```{r 3}
+(vcov_matrix <- vcov(model))
+```
+
+
+```{r 4}
+(conf_int <- confint(model, level = 0.95))
+```
+
+
+```{r 5}
+(anova_table <- anova(model))
+```
+
+
+```{r 6}
+F_statistic <- summary(model)$fstatistic
+(F_value <- F_statistic[1])
+f_model <- F_statistic[2]
+df_residual <- F_statistic[3]
+
+(p_value <- anova_table$"Pr(>F)"[1])
+```
+
+
+```{r 7}
+(R_squared <- summary(model)$r.squared)
+```
+
+
+```{r 8}
+(ssr_RFL <- anova(model)$'Sum Sq'[1])
+(ssr_LFL <- anova(model)$'Sum Sq'[2])
+(anova(model)$'Sum Sq'[3])
+(ssr_RFL + ssr_LFL)
+(anova(model)$'Sum Sq'[3] + (ssr_RFL + ssr_LFL))
+print(" ")
+(anova(model)$'Mean Sq'[1] + anova(model)$'Mean Sq'[2])
+((anova(model)$'Mean Sq'[1] + anova(model)$'Mean Sq'[2]) / 2)
+(anova(model)$'Mean Sq'[3])
+
+(anova(model)$'Mean Sq'[1] + anova(model)$'Mean Sq'[2] - )
+```
+
+
+```{r 8 contd}
+model_excluding_RFL <- lm(Y ~ LHL)
+anova(model_excluding_RFL)
+model_excluding_LHL <- lm(Y ~ RFL)
+anova(model_excluding_LHL)
+```
+
