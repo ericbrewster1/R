@@ -1,0 +1,213 @@
+---
+title: "In-Class Project 3"
+author: "Eric Brewster"
+date: "3/1/2024"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Part 1 - Response Surface to optimize (maximize) guanadine hydrochloride (GuHcl) extraction in production of murals.
+# Y = GuHcl extraction efficiency (%)  extEff_Y
+# X1 = GuHcl concentation (M)   GuHCl
+# X2 = Extraction Time (minutes)  extTime
+# X3 = Extraction Temperature (C)   extTemp
+# X4 = Ultrasonic Power (W)   ultraPwr
+
+# Read in data and display "head" and "tail"
+
+```{r part1a}
+murals <- read.csv("https://www.stat.ufl.edu/~winner/data/murals_rsm.csv")
+attach(murals); head(murals); tail(murals)
+```
+
+# Plot Y versus each factor 1-at-a-time
+
+```{r part1b}
+par(mfrow=c(2,2))
+plot(extEff_Y ~ GuHCl, pch=16)
+plot(extEff_Y ~ extTime, pch=16)
+plot(extEff_Y ~ extTemp, pch=16)
+plot(extEff_Y ~ ultraPwr, pch=16)
+par(mfrow=c(1,1))
+```
+
+# Fit the second order response surface
+
+```{r part1cde}
+library(rsm)
+mod1 <- rsm(extEff_Y ~ SO(GuHCl, extTime, extTemp, ultraPwr))
+summary(mod1)
+```
+d) Consider t-tests for individual parameters. Are any not significant at 0.10 level? If so, which ones?
+All four tests for individual parameters are significant at the 0.10 level (significant at even lower levels as well).
+
+e) Consider Sequential F-tests for groups of predictors (Linear, 2-Factor Interactions, Quadratics). Are any not significant at 0.05 level? If so, which ones?
+GuHCl:extTemp and GuHCl:ultraPwr not significant at the 0.05 level.
+
+
+# Fit Reduced Model and compare with Full
+
+```{r part1fg}
+mod2 <- rsm(extEff_Y ~ FO(GuHCl,extTime,extTemp,ultraPwr) + TWI(extTime, extTemp,ultraPwr) + TWI(GuHCl,extTime) + PQ(GuHCl,extTime,extTemp,ultraPwr))
+summary(mod2)
+anova(mod2,mod1)
+```
+g) Test whether the Reduced Model fits as well as the Full Model
+Considering that the full model's lack-of-fit p-value is 0.105157 and the reduced model's lack-of-fit p-value is 0.090585, neither is significant at the 0.05 level. There is not strong evidence that the full model is any better fit than reduced.
+
+
+# 3-D Surface Plots
+
+```{r part1h}
+par(mfrow=c(2,3))
+persp(mod2, ~ GuHCl+extTime+extTemp+ultraPwr, col="green",
+   at=summary(mod2)$canonical$xs)
+par(mfrow=c(1,1))
+```
+
+# Contour Plots
+```{r part1i}
+par(mfrow=c(2,3))
+contour(mod2, ~ GuHCl+extTime+extTemp+ultraPwr, 
+   at=summary(mod2)$canonical$xs, image=TRUE)
+par(mfrow=c(1,1))
+```
+
+
+# Detach dataframe
+
+```{r}
+detach(murals)
+```
+
+### Part 2 - Luminance of Egyptian Cotton varieties by grade
+
+# Read in data
+
+```{r part2ab}
+ec <- read.csv("http://users.stat.ufl.edu/~winner/data/egyptcttn.csv")
+attach(ec)
+head(ec); tail(ec)
+
+variety1 <- rep(2:6,each=4)   # G69=2, G67=3, G70=4, G68=5, M=6
+```
+
+# Plot luminance vs lnGrade with different colors for varieties
+
+```{r part2c}
+plot(luminance ~ lnGrade, col=variety1, pch=16)
+```
+
+# Fit simple linear regression and plot
+
+```{r part2d}
+(TSS <- sum((luminance-mean(luminance))^2))
+ec.mod1 <- lm(luminance ~ lnGrade)
+summary(ec.mod1)
+anova(ec.mod1)
+confint(ec.mod1)
+
+coef(ec.mod1)
+
+X.grid <- seq(0,5,0.1)
+yhat1 <- coef(ec.mod1)[1] + coef(ec.mod1)[2]*X.grid
+plot(luminance ~ lnGrade, pch=16, xlim=c(0,5),  ylim=c(82,92), col=variety1)
+lines(X.grid,yhat1, col="blue", lwd=2)
+```
+
+# Fit additive model (Different intercepts, common slopes) and plot
+
+
+```{r part2e}
+ec.mod2 <- lm(luminance ~ lnGrade + giza69 + giza67 + giza70 + giza68)
+summary(ec.mod2)
+anova(ec.mod2)
+confint(ec.mod2)
+
+coef(ec.mod2)
+X.grid <- seq(0,5,0.1)
+yhat1 <- coef(ec.mod2)[1] + coef(ec.mod2)[2]*X.grid
+yhat2 <- yhat1 + coef(ec.mod2)[3]
+yhat3 <- yhat1 + coef(ec.mod2)[4]
+yhat4 <- yhat1 + coef(ec.mod2)[5]
+yhat5 <- yhat1 + coef(ec.mod2)[6]
+
+plot(luminance ~ lnGrade, pch=16, col=variety1)
+lines(X.grid,yhat1, col=6, lwd=2)
+lines(X.grid,yhat2, col=2, lwd=2)
+lines(X.grid,yhat3, col=3, lwd=2)
+lines(X.grid,yhat4, col=4, lwd=2)
+lines(X.grid,yhat5, col=5, lwd=2)
+
+```
+
+# Fit interaction model (Different intercepts and slopes) and plot
+
+```{r part2f}
+ec.mod3 <- lm(luminance ~ lnGrade + giza69 + giza67 + giza70 + giza68 +
+     lnGrG69 + lnGrG67 + lnGrG70 + lnGrG68)
+summary(ec.mod3)
+anova(ec.mod3)
+confint(ec.mod3)
+
+X.grid <- seq(0,5,0.1)
+yhat1 <- coef(ec.mod3)[1] + coef(ec.mod3)[2]*X.grid
+yhat2 <- yhat1 + coef(ec.mod3)[3] + coef(ec.mod3)[7]*X.grid
+yhat3 <- yhat1 + coef(ec.mod3)[4] + coef(ec.mod3)[8]*X.grid
+yhat4 <- yhat1 + coef(ec.mod3)[5] + coef(ec.mod3)[9]*X.grid
+yhat5 <- yhat1 + coef(ec.mod3)[6] + coef(ec.mod3)[10]*X.grid
+
+plot(luminance ~ lnGrade, pch=16, col=variety1)
+lines(X.grid,yhat1, col=6, lwd=2)
+lines(X.grid,yhat2, col=2, lwd=2)
+lines(X.grid,yhat3, col=3, lwd=2)
+lines(X.grid,yhat4, col=4, lwd=2)
+lines(X.grid,yhat5, col=5, lwd=2)
+```
+
+ 
+# Test between the various models
+
+```{r part2gh}
+anova(ec.mod1,ec.mod2) # simple and additive
+anova(ec.mod2,ec.mod3) # additive and interaction
+anova(ec.mod1,ec.mod3) # simple and interaction
+
+```
+g and h) Test between the models in e) and d) for a variety effect (allowing different intercepts, controlling for lnGrade), Test between the models in f) and e) for an interaction effect (slopes differ among varieties)
+
+Test between e (additive multiple linear) and d (simple linear) for variety effect: 1.066e-07 p-value, significant at the 0.05 value.
+
+Test between f (interaction multiple linear) and e (additive multiple linear) for interaction effect: 0.02313 p-value, significant at 0.05 but not 0.01. Not as significant as variety effect.
+
+Also tested: f (interaction multiple linear) and d (simple linear): 7.114e-07 p-value, significant at the 0.05 value.
+
+
+# Fit intermediate model (Combine M&G67 and G67&G70, making G68 the reference category)
+
+```{r part2i}
+mg69 <- ifelse(variety=="Menoufi" | variety=="Giza69",1,0)
+g6770 <- ifelse(variety=="Giza67" | variety=="Giza70",1,0)
+ec.mod4 <- lm(luminance ~ lnGrade + mg69 + g6770 + I(lnGrade*mg69) + I(lnGrade*g6770))
+summary(ec.mod4)
+
+anova(ec.mod4, ec.mod3)
+
+yhat1 <- coef(ec.mod4)[1] + coef(ec.mod4)[2]*X.grid
+yhat2 <- yhat1 + coef(ec.mod4)[4] + coef(ec.mod4)[5]*X.grid
+yhat3 <- yhat1 + coef(ec.mod4)[4] + coef(ec.mod4)[6]*X.grid
+
+variety1a <- ifelse(variety1 ==2 | variety1==6, 2, ifelse(variety1 <= 4,3,4))
+variety1a
+plot(luminance ~ lnGrade, pch=16, col=variety1a)
+lines(X.grid,yhat1, col=4, lwd=2)
+lines(X.grid,yhat2, col=2, lwd=2)
+lines(X.grid,yhat3, col=3, lwd=2)
+```
+
+
+i) If appropriate, fit an intermediate model, plot it, and test whether it is adequate
+When testing between intermediate model and mod3 (interaction multiple linear), the p-value is 0.0245. Significant at 0.05 but not 0.01
