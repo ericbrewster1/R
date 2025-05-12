@@ -1,0 +1,248 @@
+---
+title: "Homework 2"
+author: "Eric Brewster"
+date: "July 11, 2024"
+output:
+  pdf_document:
+    extra_dependencies: amsmath
+  html_document:
+    df_print: paged
+---
+ 
+```{r setup, include=FALSE}
+library(formatR)
+knitr::opts_chunk$set(echo = TRUE, eval=TRUE, tidy.opts = list(width.cutoff = 60), tidy = TRUE)
+```
+
+# Problem 1
+Assuming, Y1,...,Yn, are i.i.d. N(mu, sigma) (normally distributed), construct a 100(1 - alpha)% upper CL for sigma squared (population variance).
+
+This problem requires the existence of a pivotal quantity. Given the normal distribution and the unknown mean mu/variance sigma squared, by Theorem 7.3,
+$$
+\frac{\sum_{i=1}^n (Y_i - \bar{Y})^2}{\sigma^2} = \frac{(n - 1) S^2}{\sigma^2}
+$$
+
+the above expression has a chi-square distribution with n minus 1 degrees of freedom. The next step is to use the pivotal method to determine the upper confidence level.
+
+$$
+P\left( \chi^2_L \leq \frac{(n - 1)S^2}{\sigma^2} \leq \chi^2_U \right) = 1 - \alpha
+$$
+
+The chi-square distribution is not symmetric, so choosing lower and upper values can be difficult. The compromise is to choose tails of equal area; as a result, the upper confidence level is the alpha valued halved.
+
+$$
+P\left( \chi^2_{1-(\alpha/2)} \leq \frac{(n - 1)S^2}{\sigma^2} \leq \chi^2_{\alpha/2} \right) = 1 - \alpha
+$$
+
+When you take the reciprocal of each term, you also switch the signs; in this case, this means the two tails switch places. Multiplying each term by the new denominator of the middle term (n-1 /S^2), the middle term becomes sigma squared, the value asked for in the problem.
+
+$$
+P\left( \frac{(n - 1)S^2}{\chi^2_{\alpha/2}} \leq \sigma^2 \leq \frac{(n - 1)S^2}{\chi^2_{1-\alpha/2}} \right) = 1 - \alpha
+$$
+
+
+The upper confidence limit for population variance is
+$$
+\frac{(n - 1)S^2}{\chi^2_{1 - (\alpha/2)}}
+$$
+
+
+# Problem 2: 8.39
+Suppose that the random variable Y has a gamma distribution with parameters alpha = 2 and an
+unknown beta. In Exercise 6.46, you used the method of moment-generating functions to prove a
+general result implying that 2Y/beta has a chi-square distribution with 4 degrees of freedom (df). Using 2Y/beta as a pivotal quantity, derive a 90% confidence interval for beta.
+
+Using the given pivotal quantity, this is the interval to determine the lower and upper values.
+$$
+P(a \leq 2 \frac Y \beta \leq b) = 0.9
+$$
+
+To more quickly solve the algebra and calculus used in the textbook, R can determine the bounds using qchisq() for both lower and upper. 
+$$
+P(2 \frac Y \beta < a) = P(2 \frac Y \beta > b) = 0.05
+$$
+
+```{r}
+qchisq(0.95, 4, lower.tail = FALSE)
+```
+```{r}
+qchisq(0.05, 4, lower.tail = FALSE)
+```
+Substituting in the values of a and b gives the probability equation: 
+$$
+P(0.71 \leq 2 \frac Y \beta \leq 9.49) = 0.9
+$$
+
+Isolating beta through algebra gives the desired confidence interval. To do this, 
+
+$$
+P(0.71 \leq 2 \frac Y \beta \leq 9.49) = 0.9
+$$
+$$
+P(0.71\beta \leq 2Y \leq 9.49\beta) = 0.9
+$$
+
+Separating the expression into two inequalities and isolating the beta, 
+$$
+\beta \leq \frac{2Y}{0.71}, \beta \geq \frac{2Y}{9.49}
+$$
+
+Given that 2Y/0.71 will be greater than 2Y/9.49, merge into one inequality again,
+
+$$
+P(\frac{2Y}{9.49} \leq \beta \leq \frac{2Y}{0.71}) = 0.9
+$$
+
+The 90% confidence interval for beta is
+$$
+(\frac{2Y}{9.49}, \frac{2Y}{0.71})
+$$
+These limits will include the true (unknown) value of beta for 90% of the values from repeated sampling from this chi-square distribution.
+
+
+# Problem 3: 8.47
+Refer to Exercise 8.46. Assume that Y1, Y2, . . . , Yn is a sample of size n from an exponential
+distribution with mean theta.
+
+## Part B
+Use the pivotal quantity 
+$$
+2\sum_{i=1}^n \frac{Y_i}{\theta}
+$$
+to derive a 95% confidence interval for theta.
+
+The problem asks for the interval ends a and b in
+$$
+P(a \leq 2\sum_{i=1}^n \frac{Y_i}{\theta} \leq b) = 0.95
+$$
+
+To rephrase, this means finding a and b so there are two tails each with 0.025% as shown below:
+$$
+P\left(2 \sum_{i=1}^{n} \frac {Y_i} \theta < a\right),
+P\left(2 \sum_{i=1}^{n} \frac {Y_i} \theta > b\right)
+$$
+
+If the degrees of freedom were known, the chi-square table could be used (or use qchisq() in R). As the degrees of freedom are not (exactly) known, substitute in the 2n from the problem definition into a chi-square variable. For a and b, this translates to
+$$
+a = \chi^2_{2n} (0.975), b = \chi^2_{2n} (0.025)
+$$
+
+Returning to the problem at hand, the solution is to isolate theta in the central term. The first step inserts the chi-square equivalent of a/b and brings the constant of 1 divided by theta before the summation.
+$$
+P(\chi^2_{2n} (0.975) \leq \frac 2 \theta \sum_{i=1}^n {Y_i} \leq \chi^2_{2n} (0.025)) = 0.95
+$$
+
+Next, multiply each term by theta:
+$$
+P(\theta\chi^2_{2n} (0.975) \leq  2 \sum_{i=1}^n {Y_i} \leq \theta \chi^2_{2n} (0.025)) = 0.95
+$$
+
+Taking reciprocals of the terms means switching the direction of the inequality. In this case, I switched left and right terms.
+$$
+P(\frac{2 \sum_{i=1}^n {Y_i}}{\chi^2_{2n} (0.025)} \leq \theta \leq \frac {2 \sum_{i=1}^n {Y_i}}{\chi^2_{2n} (0.975)}) = 0.95
+$$
+
+The 95% confidence interval,
+$$
+(\frac{2 \sum_{i=1}^n {Y_i}}{\chi^2_{2n} (0.025)}, \frac {2 \sum_{i=1}^n {Y_i}}{\chi^2_{2n} (0.975)})
+$$
+will contain the true (unknown) values of theta for 95% of the values obtained from Y by sampling from the exponential distribution.
+
+
+## Part C
+If a sample of size n = 7 yields y = 4.77, use the result from part (b) to give a 95%
+confidence interval for theta.
+
+Write out the result from part b, recalling that the sum of samples represents y-bar, or the sample mean, multiplied by the number of samples. As the problem gives the sample mean and sample number, substitute the value in.
+$$
+(\frac{2n \bar Y} {\chi^2_{2n} (0.025)}, \frac {2n \bar Y}{\chi^2_{2n} (0.975)})
+= (\frac{2(7)(4.77)} {\chi^2_{14} (0.025)}, \frac {2(7)(4.77)}{\chi^2_{14} (0.975)})
+$$
+Using the same code as before, input degrees of freedom and desired tail for the chi-squared value.
+```{r}
+qchisq(0.975, 14, lower.tail = FALSE)
+```
+
+```{r}
+qchisq(0.025, 14, lower.tail = FALSE)
+```
+Substituting in the chi-square values,
+$$
+(\frac{2(7)(4.77)} {26.12}, \frac {2(7)(4.77)}{5.63})
+= (2.56, 11.86)
+$$
+
+gives the 95% confidence interval for theta of (2.56, 11.86).
+
+# Problem 4: 8.56
+Is America’s romance with movies on the wane? In a Gallup Poll of n = 800 randomly chosen
+adults, 45% indicated that movies were getting better whereas 43% indicated that movies were
+getting worse.
+
+## Part A
+Find a 98% confidence interval for p, the overall proportion of adults who say that movies
+are getting better.
+
+Below is the formula for construsting a confidence interval based on successes in a binomial experiment:
+$$
+\hat{p} \pm z_{\alpha/2} \sqrt{\frac{\hat{p}(1 - \hat{p})}{n}}
+$$
+Determining the z-value using the t-table, given the binomial distribution:
+$$
+z_{.01} = 2.326, z_{.99} = 2.326
+$$
+
+Substitute in the values given in the problem definition. P-hat represents the proportion of successes, in the case the proportion who say movies are getting better and n being the number of respondents:
+$$
+0.45 \pm 2.33 \sqrt{\frac{0.45(1 - 0.45)}{800}}
+= (0.41, 0.49)
+$$
+
+The 98% confidence interval for p is (0.41, 0.49). This represents the proportion of adults who say that movies are getting better in 98% of iterations of using this procedure.
+
+## Part B
+Does the interval include the value p = .50? Do you think that a majority of adults say
+that movies are getting better?
+
+The interval does not include the value p= .50, so I do not think a majority of adults say that movies are getting better. The procedure that generates the interval does not include 0.50 in approximately 98% of instances where this procedure is used, so there is not reason to believe that majority of adults say movies are getting better.
+
+
+# Problem 5: 8.85
+Two new drugs were given to patients with hypertension. The first drug lowered the blood
+pressure of 16 patients an average of 11 points, with a standard deviation of 6 points. The
+second drug lowered the blood pressure of 20 other patients an average of 12 points, with a
+standard deviation of 8 points. Determine a 95% confidence interval for the difference in the
+mean reductions in blood pressure, assuming that the measurements are normally distributed
+with equal variances.
+
+The equation below is used find the confidence interval for estimating the true mean difference between two populations:
+$$
+(\bar y_1 - \bar y_2) \pm t_{\alpha/2} s_p \sqrt{\frac{1}{n_1} + \frac{1}{n_2}}
+$$
+
+Filling in known terms from the problem definition:
+$$
+(11 - 12) \pm t_{\alpha/2} s_p \sqrt{\frac{1}{16} + \frac{1}{20}}
+$$
+
+Using the t-table:
+$$
+t_{0.025, 34} \approx 2.03 
+$$
+
+Determining the pooled estimator for variance:
+$$
+S_p^2 = \frac{(n_1 - 1)S_1^2 + (n_2 - 1)S_2^2}{n_1 + n_2 - 2}
+= \frac{(16 - 1)6^2 + (20 - 1)8^2}{16 + 20 - 2}
+= 51.647, 
+s_p = 7.19
+$$
+
+Putting all the variables together:
+$$
+(-1) \pm (2.03)(7.19)(\frac{1}{6})
+= (-5.89, 3.89)
+$$
+
+The final interval is (-5.89, 3.89). This is the interval in which we are 95% certain that the true mean difference between blood pressure reduction by medicine lies. Because the interval contains both positive and negative values, neither drug can be said to produce a mean blood pressure reduction that differs from the other.
+

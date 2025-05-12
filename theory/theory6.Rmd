@@ -1,0 +1,158 @@
+---
+title: "Homework 5"
+author: "Eric Brewster"
+date: "August 4, 2024"
+output:
+  pdf_document:
+    extra_dependencies: amsmath
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+library(formatR)
+knitr::opts_chunk$set(echo = TRUE, eval=TRUE, tidy.opts = list(width.cutoff = 60), tidy = TRUE)
+```
+
+# Problem 1: 10.52
+A biologist has hypothesized that high concentrations of actinomycin D inhibit RNA synthesis
+in cells and thereby inhibit the production of proteins. An experiment conducted to test this
+theory compared the RNA synthesis in cells treated with two concentrations of actinomycin D:
+0.6 and 0.7 micrograms per liter. Cells treated with the lower concentration (0.6) of actinomycin
+Dyielded that 55 out of 70 developed normally whereas only 23 out of 70 appeared to develop
+normally for the higher concentration (0.7). Do these data indicate that the rate of normal RNA
+synthesis is lower for cells exposed to the higher concentrations of actinomycin D?
+
+## Part A
+Find the p-value for the test.
+
+In this problem, we are testing
+$$
+H_{0}: p_{1} = p_{2} \text { and } H_{a}: p_{1} > p_{2}
+$$
+
+where p1 is the synthesis of the lower concentration of actinomycin D and p2 is the synthesis of the higher concentration. The formula for finding the test statistic for comparing two proportions is
+$$
+Z = \frac{\hat{p_1} - \hat{p_2}}{\sqrt{\frac{\hat{p_1}(1 - \hat{p_1})}{n_1} + 
+\frac{\hat{p_2}(1 - \hat{p_2})}{n_2}}}
+$$
+
+Substituting in the values in the problem:
+$$
+Z = \frac{55 - 23}{\sqrt{\frac{55*15}{70} + \frac{23*47}{70}}} = \frac{22\sqrt{70}}{\sqrt{1906}} = 4.22
+$$
+
+Because trhe null hypothesis has a standard normal distribution, the p-value is
+$$
+P(Z \geq 4.22) = 0.00001
+$$
+
+The very small p-value for this test provides sufficient evidence that the rate of RNA synthesis is lower for cells with a higher concentration.
+
+
+## Part B
+If you chose to use alpha = .05, what is your conclusion?
+
+If the chosen alpha value is .05, we reject the null hypothesis and conclude that there is sufficient evidence that cells exposed to a higher concentration of actinomycin D have a lower rate of synthesis.
+
+
+# Problem 2: 10.63(a)
+A chemical process has produced, on the average, 800 tons of chemical per day. The daily
+yields for the past week are 785, 805, 790, 793, and 802 tons.
+
+Do these data indicate that the average yield is less than 800 tons and hence that something
+is wrong with the process? Test at the 5% level of significance. What assumptions must be
+satisfied in order for the procedure that you used to analyze these data to be valid?
+
+In this problem, we are testing
+$$
+H_{0}: \mu = 800 \text { and } H_{a}: \mu < 800
+$$
+
+
+For small-sample testing on a mean, the test statistic is
+$$
+T = \frac{\bar{Y} - \mu_0}{S/\sqrt{n}}
+$$
+
+
+We are given the following values:
+$$
+n = 5, \bar{Y} = 795, S^2 = 278/4 = 69.5
+$$
+
+Under the null hypothesis, this follows a t-distribution with 4 degrees of freedom. Substituting in the values given in the problem:
+$$
+T = \frac{795 - 800}{\sqrt{69.5/5}} = -\frac{5}{3.728} = -1.34
+$$
+
+Because the test statistic is higher than the critical value for a t-distribution at alpha .05 (-4.604), we fail to reject the null hypothesis; there is insufficient evidence to claim that there is something wrong with the process.
+
+The assumptions needing to be satisfied is that this sample must be random from a normal distribution where the expectation of the sample is equal to mu, or the mean.
+
+# Problem 3: 10.98
+Hint: Use change of variable formula from STA 4321 to identify distribution of transformation of Y.  Then, need to figure out what the sum of those transformations will be.
+
+Let Y1, . . . , Yn be a random sample from the probability density function given by
+$$
+f(y|\theta) =
+\begin{cases}
+\frac{1}{\theta} m y^{m-1} e^{-\frac{y^m}{\theta}}, & y > 0, \\
+0, & \text{elsewhere}
+\end{cases}
+$$
+with m denoting a known constant.
+
+## Part A
+Find the uniformly most powerful test for testing H0 : theta = theta_0 against Ha : theta > theta_0 .
+
+The most powerful test is given by:
+$$
+\frac{L(\theta_0)}{L(\theta_a)} < k 
+$$
+
+Rearranging the likelihood functions
+$$
+\frac{L(\theta_0)}{L(\theta_a)} =
+\frac{m^n/\theta_0^n * e(-1/\theta_0 \sum_{i=1}^n Y^m_i) * \prod_{i=1}^n Y_i^{m = 1}}{m^n/\theta_a^n * e(-1/\theta_a \sum_{i=1}^n Y^m_i) * \prod_{i=1}^n Y_i^{m = 1}}
+= (\theta_a/\theta_0)^3 * e(1/\theta_a \sum_{i=1}^n Y_i - 1/\theta_0 \sum_{i=1}^n Y_i)
+$$
+
+The rejection region is
+$$
+e(1/\theta_a \sum_{i=1}^n Y_i^m - 1/\theta_0 \sum_{i=1}^n Y_i^m) < k 
+1/\theta_a \sum_{i=1}^n Y_i^m - 1/\theta_0 \sum_{i=1}^n Y_i^m < ln(k) 
+\frac{\theta_0-\theta_a}{\theta_0 \theta_a} \sum_{i=1}^n Y^m_i < ln(k) 
+\sum_{i=1}^n Y^m_i > \frac{\theta_0-\theta_a}{\theta_0 \theta_a} ln(k)
+$$
+
+The form of the rejection region of the most powerful test is
+$$
+\sum_{i=1}^n Y^m_i > k*
+$$
+
+
+## Part B
+If the test in part (a) is to have theta_0 = 100, alpha = .05, and beta = .05 when theta_a = 400, find the
+appropriate sample size and critical region.
+
+Given part a's result and the chi-square distribution, we have
+$$
+P_{\theta_a}(\sum_{i=1}^n Y^m_i > \theta_0/2 * \chi^2_{2n,\alpha}) = 0.95 
+P_{\theta_a}(\frac{2\sum_{i=1}^n Y^m_i}{\theta_a} > \frac{\theta_0}{\theta_a} * \chi^2_{2n,0.05}) = 0.95 
+P_{\theta_a}(\frac{2\sum_{i=1}^n Y^m_i}{\theta_a} > \frac{1}{4} * \chi^2_{2n,0.05}) = 0.95
+$$
+
+Because the left side of the result follows a chi square distribution, we can use the chi-square table's values:
+$$
+\chi^2_{2n,0.05} = 21.02, \chi^2_{2n,0.95} = 5.226
+$$
+
+these values approximately solve the equation. Given 2n = 12, n = 6 is the appropriate sample size. The appropriate critical region is
+$$
+\sum_{i=1}^n Y^m_i > \theta_0/2 * \chi^2_{12,0.05} 
+\sum_{i=1}^n Y^m_i > 100/2 * 21.02
+\sum_{i=1}^n Y^m_i > 1051
+$$
+
+

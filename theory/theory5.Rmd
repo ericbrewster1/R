@@ -1,0 +1,162 @@
+---
+title: "Homework 4"
+author: "Eric Brewster"
+date: "July 24, 2024"
+output:
+  pdf_document:
+    extra_dependencies: amsmath
+  html_document:
+    df_print: paged
+---
+ 
+```{r setup, include=FALSE}
+library(formatR)
+knitr::opts_chunk$set(echo = TRUE, eval=TRUE, tidy.opts = list(width.cutoff = 60), tidy = TRUE)
+```
+
+# Problem 1: 10.6
+We are interested in testing whether or not a coin is balanced based on the number of heads
+Y on 36 tosses of the coin. (H0 : p = .5 versus Ha : p /= .5). If we use the rejection region
+|y - 18| >= 4,
+
+## Part A
+What is the value of alpha?
+
+The alpha value, or the level of a test, represents the probability of a type I error; that is, the probability of rejecting the null hypothesis when the null hypothesis is true. For this problem, we are trying to find
+$$
+\alpha \equiv P(\hat{p} \neq .5 | H_0 \text{ is true})
+$$
+
+Recall that the above equation also means the probability that the test statistic is in the rejection region when the null hypothesis is true. Thus,
+$$
+\alpha = P(|y-18| \geq 4 | P = 0.5)
+= P(Y \leq 14 | P = 0.5) + P(Y \geq 22 | P = 0.5)
+$$
+
+As with the first example in module 4's slides, the sum of the samples is approximately binomial(n, 0.5) when p = 0.5. Substituting in the binomial(n, 0.5) PMF over the rejection region,
+$$
+\alpha = \sum_{j < 0.5n} (\binom{n}{j}) (0.5)^j (1-0.5)^{n-j} + 
+\sum_{j > 0.5n} (\binom{n}{j}) (0.5)^j (1 - 0.5)^{n-j}
+$$
+
+Substituting in the values given in the problem,
+$$
+\alpha = \sum_{y = 0}^{14} (\binom{36}{y}) (0.5)^y (0.5)^{36-y} +
+\sum_{y = 22}^{36} (\binom{36}{y}) (0.5)^y (0.5)^{36-y}
+= 0.1215 + 0.1215 = 0.2430
+$$
+
+The alpha value, of the level of the test, is 0.243.
+
+## Part B
+What is the value of beta if p = .7?
+
+The beta value is the probability of type II error, or the probability of failing to reject the null when the alternate is true. In other words, this is the probability that the test statistic is not in the rejection region when p is 0.7:
+
+$$
+\beta_{p=0.7} = P(14 < Y < 22) = P(Y \leq 21) - P(Y \leq 14)
+$$
+
+Using the binomial PMF to sum all the values not in the rejection region,
+$$
+\beta = \sum_{y = 0}^21 (\binom{36}{y}) (0.7)^y (0.3)^{36-y} -
+\sum_{y = 0}^14 (\binom{36}{y}) (0.7)^y (0.3)^{36-y}
+= 0.0916 - 0.0001 = 0.0915
+$$
+
+The value of beta is 0.0915.
+
+# Problem 2: 
+The output voltage of a circuit is specified to be 130 V.  From a random sample of 40 observations that yielded mean 128.6 and standard deviation 2.1,
+
+## Part A
+Test whether the mean is significantly different from 130.  Remark: hypotheses are always setup before looking at data, do not let sample data dictate hypotheses.
+
+Here are the hypotheses to test:
+$$
+H_0: \theta = 130, H_a: \theta \neq 130
+$$
+
+Calculating the test statistic:
+$$
+\text{TS } = \frac{\hat{\theta} - \theta_0}{\hat{\text{SD}} (\hat{\theta})}
+= \frac{(128.6 - 130)}{2.1/\sqrt{40}} = -4.22
+$$
+
+The rejection region for this problem is
+$$
+|TS| > z_{1-\alpha/2} = |-4.22| > z_{0.975} = 4.22 > 1.96
+$$
+
+Given that the value is in the rejection region, the p-value will be lower than the alpha value of 0.05, and there is sufficient evidence that the mean is significantly different from 130. This can be confirmed using pnorm to see the p-value below.
+
+```{r}
+2*(1-pnorm(4.22))
+```
+
+Since the p-value is less than alpha value 0.05, there is evidence to conclude that the mean is significantly different from 130.
+
+## Part B
+Find the power if in fact the true mean is 128.6.
+
+From the slides, the formula for a two sided beta is
+$$
+\beta(\theta_{a}) = \Phi \left( \frac{\theta_{0} - \theta_{a}}{\widehat{SD}(\hat{\theta})} + z_{1-\alpha/2} \right) - \Phi \left( \frac{\theta_{0} - \theta_{a}}{\widehat{SD}(\hat{\theta})} + z_{\alpha/2} \right)
+$$
+
+Substituting in the problem's values and z-scores for alpha = 0.05:
+
+$$
+\beta = \Phi (-4.22 + 1.96) - \Phi (-4.22 - 1.96)
+= \Phi (-2.26) - \Phi (-6.18)
+= 0.0119 - 0 = 0.0119
+$$
+
+Recalling the formula for power,
+$$
+1 - \beta = 1 - 0.0119 = 0.9881
+$$
+
+The power is 0.9881; this is the probability of rejecting the null when the alternate is true.
+
+
+## Part C
+Derive a way for finding the sample size for a given hypothesis test of given power, in lecture 13.
+
+Starting with the definition for the two-sided beta, trying to solve for desired power 1 minus beta:
+$$
+1 - \beta = \Phi (\frac{\theta_{0}-\theta{a}}{\sigma/\sqrt{n}} + z_{\alpha/2}) - \Phi (\frac{\theta_{0}-\theta{a}}{\sigma/\sqrt{n}} - z_{\alpha/2})
+$$
+
+For this to be true, the equation below must be true
+$$
+\frac{\theta_{0}-\theta{a}}{\sigma/\sqrt{n}} = z_{\alpha/2} + z_{\beta}
+$$
+
+Rearrange this formula to isolate n:
+$$
+\theta_{0}-\theta{a} = (\sigma/\sqrt{n})(z_{\alpha/2} + z_{\beta}) \\
+\sqrt(n) = \frac{\sigma(z_{\alpha/2}+z_{\beta})}{\theta-\theta_{0}}
+$$
+
+The formula for the sample size for a two sided of a given power is
+$$
+n = [\frac{\sigma(z_{\alpha/2}+z_{\beta})}{\theta-\theta_{0}}]^2
+$$
+
+## Part D
+Use (c) to find the sample size needed if the researcher wants the power to be 0.91.
+
+Using the formula
+$$
+n = [\frac{\sigma(z_{\alpha/2}+z_{\beta})}{\theta-\theta_{0}}]^2
+$$
+
+Substituting in the value from the problem
+$$
+n = [\frac{2.1*(1.96 + 1.34)}{128.6 - 130}]^2
+= 4.95^2 = 24.5025
+$$
+
+The sample size needed if the researcher wants to power to be 0.91 is 24.5025. Practically, this is 25 observations of circuits.
+

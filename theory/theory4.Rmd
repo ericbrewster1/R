@@ -1,0 +1,353 @@
+---
+title: "Homework 3"
+author: "Eric Brewster"
+date: "July 18, 2024"
+output:
+  pdf_document:
+    extra_dependencies: amsmath
+  html_document:
+    df_print: paged
+---
+ 
+```{r setup, include=FALSE}
+library(formatR)
+knitr::opts_chunk$set(echo = TRUE, eval=TRUE, tidy.opts = list(width.cutoff = 60), tidy = TRUE)
+```
+
+# Problem 1: 9.4
+Let Y1, Y2, . . . , Yn denote a random sample of size n from a uniform distribution on the interval (0, theta). If Y(1) = min(Y1, Y2, . . . , Yn), the result of Exercise 8.18 is that theta-hat1 = (n + 1)Y(1) is an unbiased estimator for theta. If Y(n) = max(Y1, Y2, . . . , Yn), the results of Example 9.1 imply that theta-hat2 = [(n + 1)/n]Y(n) is another unbiased estimator for theta. Show that the efficiency of theta-hat1 to theta-hat2 is 1/n2. Notice that this implies that theta-hat2 is a markedly superior estimator.
+
+
+The efficiency of two unbiased estimators is the ratio of the variances of the two estimators, so we need to find these two values. Normally, this would be the ratio of the mean squared errors of the predictors, which equals the variances here given the unbiased nature of the estimators.
+
+#### Determining the variance of estimator 1
+First, bring the constant term out front (recalling to square for variance) to isolate the variance of Y1 (the minimum of samples):
+$$
+V(\hat{\theta}_1) = V((n+1)Y_{(1)}) = (n+1)^2 V(Y_{(1)})
+$$
+Below is the density function of Y1 (minimum of the samples of Y) given by section 6.7,
+$$
+g_1(y) = n [1-F_Y (y)]^{n-1} f_Y (y) =
+\begin{cases}
+{n} \left(1- \frac{y}{\theta} \right)^{n-1} (\frac{1}{\theta}), & 0 \leq y \leq \theta, \\
+0, & \text{elsewhere}.
+\end{cases}
+$$
+Thus, the expectation of Y1 (the minimum of samples), is found below. To find this, I used u-substitution (with t to avoid confusion), to integrate.
+$$
+E(Y_{(1)}) =  \int_{0}^{\theta} y \frac{n}{\theta} ({1-\frac{y}{\theta})^{n-1}} dy
+= n\theta \int_{0}^{1} (t^{n-1} - t^n) \, dt
+= n\theta \cdot \left[ \frac{t^n}{n} \right]_{0}^{1} - n\theta \cdot \left[ \frac{t^{n+1}}{n+1} \right]_{0}^{1}
+= \frac{\theta}{n + 1}
+$$
+To find the variance for the first estimator, we first need the expectation of squared Y:
+$$
+E(Y_{(1)}^2) = \int_{0}^{\theta} y^2 \left( \frac{n}{\theta} \right) \left(1 - \frac{y}{\theta}\right)^{n-1} dy
+= n\theta^2 \int_{0}^{1} (t^{n+1} + t^{n-1} - 2t^n) \, dt
+= n\theta^2 \cdot \left[ \frac{t^{n+2}}{n+2} \right]_{0}^{1} + n\theta^2 \cdot \left[ \frac{t^n}{n} \right]_{0}^{1} - 2n\theta^2 \cdot \left[ \frac{t^{n+1}}{n+1} \right]_{0}^{1}
+= \frac{2\theta^2}{(n+2)(n+1)}
+$$
+Filling in the variance formula to find the variance of estimator 1:
+$$
+V(Y_{(1)}) = E(Y_{(1)}^2) - (E(Y_{(1)}))^2
+= \frac{2\theta^2}{(n+2)(n+1)} - \frac{\theta^2}{(n+1)^2}
+= \frac{n\theta^2}{n+2}
+$$
+#### Determining the variance of estimator 2
+Below is the density function of Yn (maximum of the samples of Y) given by example 9.1,
+$$
+g_n(y) = n [F_Y (y)]^{n-1} f_Y (y) =
+\begin{cases}
+{n} \left( \frac{y}{\theta} \right)^{n-1} (\frac{1}{\theta}), & 0 \leq y \leq \theta, \\
+0, & \text{elsewhere}.
+\end{cases}
+$$
+Thus, the expectation of Yn (the maximum of samples),
+$$
+E(Y_{(n)}) = \frac{n}{\theta^n} \int_{0}^{\theta} {y^n} dy = (\frac{n}{n + 1}) \theta
+$$
+Recalling that variance can be calculated by expectation of squared distribution minus the squared expectation of the distribution, find the former:
+$$
+E(Y_{(n)}^2) = \frac{n}{\theta^n} \int_{0}^{\theta} {y^{n+1}} \, dy = (\frac{n}{n + 2}) \theta^2
+$$
+Set up the equation for the estimator's variance using its expectation of mean:
+$$
+V(Y_{(n)}) = E(Y_{(n)}^2) - [E(Y_{(n)})]^2 = [\frac{n}{n + 2} - \left( \frac{n}{n + 1} \right)^2] \theta^2
+$$
+Solve for the variance of the second estimator using algebra:
+$$
+V(\hat{\theta_2}) = V \left( (\frac{n + 1}{n}) Y_{(n)} \right) =
+\left( \frac{n + 1}{n} \right)^2 V(Y_{(n)}) =
+[\frac{(n+1)^2}{n(n+2)} - 1]\theta^2 =
+\frac{\theta^2}{n(n + 2)}
+$$
+
+
+#### Final efficiency
+
+$$
+\text {eff}(\hat{\theta_1}, \hat{\theta_2}) = \frac{V(\hat{\theta_2})}{V(\hat{\theta_1})}
+= \frac {\theta^2/[n(n+2)]}{n\theta^2/(n+2)} = \frac{1}{n^2}
+$$
+The efficiency of estimator 1 to estimator 2 is 1 over n samples squared, implying estimator 2 to be a far superior estimator.
+
+
+# Problem 2: 9.19
+Let Y1, Y2, . . . , Yn denote a random sample from the probability density function
+$$
+f(y) = \begin{cases} 
+      \theta y^{\theta-1} & 0 < y < 1 \\
+      0 & elsewhere
+   \end{cases}
+$$
+where theta > 0. Show that Y-bar is a consistent estimator of theta/(theta + 1).
+
+An estimator is consistent if the limit of its variance approaches 0; that is, 
+$$
+\lim_{n \to \infty} V(\hat{\theta_n}) = 0
+$$
+Recalling the formula for variance, the first step is to determine the expectation of Y via integration:
+$$
+E(Y) = \int_0^1 y\theta \cdot y^{\theta-1}dy
+= \int_0^1 \theta \cdot y^\theta dy
+= \theta [\frac{y^{\theta+1}}{\theta+1}]^1_0
+= \frac{\theta}{\theta + 1}
+$$
+Additionally, show that y-bar is an unbiased estimator:
+$$
+E(\bar{Y}) = E[\frac{1}{n} \sum_{i=1}^n Y_i]
+= \frac{1}{n} E[\sum_{i=1}^n Y_i]
+= \frac{1}{n} \sum_{i=1}^n E[Y_i]
+= \frac{1}{n} \sum_{i=1}^n \frac{\theta}{\theta + 1}
+= \frac{1}{n} n \frac{\theta}{\theta + 1}
+= \frac{\theta}{\theta+1}
+$$
+As y-bar is an unbiased estimator, use the formula for variance, firstly determining the expectation of Y squared via integration:
+$$
+E(Y^2) = \int_0^1 y^2\theta \cdot y^{\theta-1}dy
+= \int_0^1 \theta \cdot y^{\theta + 1} dy
+= \theta [\frac{y^{\theta+2}}{\theta+2}]^1_0
+= \frac{\theta}{\theta + 2}
+$$
+Filling in the formula for variance:
+$$
+V(Y) = E(Y^2) - (E(Y))^2
+= \frac{\theta}{\theta+2} - \frac{\theta^2}{(\theta+1)^2}
+= \frac{\theta}{(\theta+1)^2(\theta+2)}
+$$
+Substituting in the value of V(Y) for y-bar:
+$$
+V(\bar Y) = V[\frac{1}{n}\sum_{i=1}^n Y_i]
+= \frac{1}{n^2}V[\sum_{i=1}^n Y_i]
+= \frac{1}{n^2}\sum_{i=1}^n V[Y_i]
+= \frac{1}{n^2}\sum_{i=1}^n \frac{\theta}{(\theta+1)^2(\theta+2)}
+= \frac{\theta}{n(\theta+1)^2(\theta+2)}
+$$
+Recalling what the problem asks for, we want the estimator's behavior as n goes to infinity:
+$$
+\lim_{n \to \infty} V(\hat{\theta_n})
+= \lim_{n \to \infty} \frac{\theta}{n(\theta+1)^2(\theta+2)} = 0
+$$
+As n gets larger, the limit approaches 0, so y-bar is a consistent estimator for theta/theta plus 1.
+
+# Problem 3: 9.43
+Let Y1, Y2, ..., Yn denote independent and identically distributed random variables from a
+power family distribution with parameters alpha and theta. Then, by the result in Exercise 6.17, if alpha and theta are greater than 0, 
+$$
+f(y|\alpha,\theta) = \begin{cases} 
+      \frac{\alpha y^{\alpha-1}}{\theta^{\alpha}} & 0 \leq y \leq \theta \\
+      0 & elsewhere
+   \end{cases}
+$$
+If theta is known, show that the product of Yi (from 1 to n) is sufficient for alpha.
+
+For the product to be a sufficient statistic for alpha, the likelihood must be split into function g, a function of only u and theta, and function h (which is not a function of theta).
+$$
+L(y_1, y_2, \ldots, y_n \mid \theta) = g(u, \theta) \times h(y_1, y_2, \ldots, y_n)
+$$
+First, substitute in alpha and the product term.
+$$
+L(\alpha) = L(y_1, y_2, \ldots, y_n|\prod_{i=1}^{n} y_i)
+$$
+Expand each product term given the problem definition and consolidate into one expression:
+$$
+L(\alpha) = \frac{\alpha}{\theta^\alpha}y_1^{a-1} \cdot \frac{\alpha}{\theta^\alpha}y_2^{a-1}
+\cdot \ldots \cdot \frac{\alpha}{\theta^\alpha}y_n^{a-1}
+=  \frac{\alpha}{\theta^{n\alpha}}  \left( \prod_{i=1}^{n} y_i \right)^{\alpha-1}
+$$
+Given that the result above is a function of only alpha and theta, you can write it as
+$$
+g(\prod_{i=1}^{n} y_i, \alpha) \cdot h(y)
+$$
+where h(y) is equal to 1, a function of netiher alpha nor theta. Because we can write the expression as below,
+$$
+L(\alpha) = g\left( \prod_{i=1}^{n} y_i , \alpha \right) h(y_1, \ldots, y_n)
+$$
+theorem 9.4 says the product of Y is sufficient for alpha.
+
+# Problem 4: 9.34 and 9.58
+
+## Problem 9.34
+The Rayleigh density function is given by
+$$
+f(y|\theta) = \begin{cases} 
+      (\frac{2y}{\theta})e^{-y^2/\theta}
+ & y > 0 \\
+      0 & elsewhere
+   \end{cases}
+$$
+In Exercise 6.34(a), you established that Y-squared has an exponential distribution with mean theta. If Y1, Y2, . . . , Yn denote a random sample from a Rayleigh distribution, show that 
+$$
+\frac{1}{n} \sum_{i = 1}^{n} Y_i^2
+$$
+is a consistent estimator for theta.
+
+Given the exponential distribution with mean theta, or
+$$
+E(Y_i^2) = \theta, V(Y_i^2) = \theta^2
+$$
+there is a finite mean and variance. Here, you can apply the law of large numbers to find that Wn is a consistent estimator E(Wn). From there, calculate the expectation of Wn.
+$$
+E(W_n) = E(\frac{1}{n} \sum_{i=1}^n Y^2_i) = \frac{1}{n} E(\sum_{i=1}^n Y^2_i)
+= \frac{1}{n} \sum_{i=1}^n E(Y^2_i)
+= n\theta/n = \theta
+$$
+Because the expectation of Wn is equal to theta, Wn is a consistent estimator of theta.
+
+## Problem 9.58
+Refer to Exercise 9.40. Use
+$$
+\sum_{i = 1}^{n} Y_i^2
+$$
+to find an MVUE of theta.
+
+From problem 9.40, the summation of Y squared above is sufficient for theta. The first step to find an MVUE of theta is to find an unbiased statistic equal to the summation above.
+$$
+E[Y_i^2] = \int_0^\infty y_i^2 f(y) \, dy 
+= \int_0^\infty y_i^2 \cdot \theta^2 y \, e^{-\theta y^2} \, dy 
+= \theta^2 \int_0^\infty y_i^3 \, e^{-\theta y^2} \, dy
+= \theta
+$$
+Find the expectation of the Y given:
+$$
+E\left[ \sum_{i=1}^n y_i^2 \right] 
+= \sum_{i=1}^n E[y_i^2] 
+= \sum_{i=1}^n \theta 
+= n\theta
+$$
+The above is not equal to the expectation of Y-squared, so alter the estimator:
+$$
+E\left[ \frac {\sum_{i=1}^n y_i^2}{n} \right] 
+= \frac{1}{n} E[\sum_{i=1}^n y_i^2] 
+= \frac{1}{n} \sum_{i=1}^n E[y_i^2] 
+= \frac{1}{n} \sum_{i=1}^n \theta 
+= n\theta /n = \theta
+$$
+Therefore,
+$$
+\frac {\sum_{i=1}^n y_i^2}{n}
+$$
+is an unbiased estimator for theta and a function of the sufficient statistic (without the n denominator), to the estimator is an MVUE for theta.
+
+# Problem 5: 9.72
+If Y1, Y2, . . . , Yn denote a random sample from the normal distribution with mean mu and
+variance sigma squared, find the method-of-moments estimators of mu and sigma squared.
+
+The first moment of the random variable, as defined in section 9.6, is
+$$
+\mu^{'}_k = E(Y^k), \text { } \mu^{'}_1 = E(Y^1), \text { } \mu = E(Y)
+$$
+The corresponding first sample moment is
+$$
+m^{'}_k = \frac{1}{n} \sum_{i=1}^{n} Y_i^k, \text { }
+m^{'}_1 = \frac{1}{n} \sum_{i=1}^{n} Y_i^1, \text { }
+m_1 = \frac{1}{n} \sum_{i=1}^{n} Y_i = \mu
+$$
+Rearranging the formula for variance reveals a way to find the expectation of Y-squared, or the second moment:
+$$
+V(Y) = E(Y^2) - [E(Y)]^2, E(Y^2) = V(Y) + [E(Y)]^2
+$$
+Substitute in the defintions of variance on the expectation of Y to get the second moment:
+$$
+E(Y^2) = \sigma^2 + \mu^2
+$$
+To find the corresponding second sample moment, replace sigma and mu with their sample definitions:
+$$
+m_2 = \frac{1}{n} \sum_{i=1}^{n} Y_i^2 = \sigma^2 + \mu^2
+$$
+Rearrange the above formula to isolate the sigma squared term, substituting in the definiion of mu: 
+$$
+\hat{\sigma^2} = \frac{1}{n} \sum_{i=1}^{n} Y_i^2 - (\frac{1}{n} \sum_{i=1}^{n} Y_i)^2
+$$
+
+# Problem 6: 9.82
+Let Y1, Y2, . . . , Yn denote a random sample from the density function given by
+$$
+f(y|\theta) = \begin{cases} 
+      (\frac{1}{\theta})ry^{r-1} e^{-y^r/\theta}
+ & \theta >0, y > 0 \\
+      0 & elsewhere
+   \end{cases}
+$$
+where r is a known positive constant.
+
+## Part A
+Find a sufficient statistic for theta.
+
+Set up the likelihood equation, pulling out the constants in the product term:
+$$
+L(Y_1, Y_2, \ldots, Y_n) = \prod_{i=1}^n f(Y_i) 
+= \prod_{i=1}^n \frac{1}{\theta} rY_i^{r-1} e^{-Y_i^r / \theta} 
+= \left( \frac{1}{\theta} \right)^n r^n \prod_{i=1}^n Y_i^{r-1} \cdot e^{-\sum_{i=1}^n Y_i^r / \theta}
+$$
+If you set up the equation as follows, 
+$$
+h(Y_1, Y_2, \ldots, Y_n) = r^n \prod_{i=1}^n Y_i^{r-1}, 
+U(Y_1, Y_2, \ldots, Y_n) = \sum_{i=1}^n Y_i^r,
+g(U, \theta) = \left(\frac{1}{\theta}\right)^n e^{-U/\theta}
+$$
+U does not depend on theta, so U is sufficient for theta.
+
+## Part B
+Find the MLE of theta.
+
+Recall the likelihood equation for theta:
+$$
+L(\theta) = \frac{r^n}{\theta^n} \prod_{i=1}^n Y_i^{r-1} \cdot e^{-\sum_{i=1}^n Y_i^r / \theta}
+$$
+Take the derivative with regards to theta. The r constant (when derived) is zero, as well as the product term:
+$$
+\frac{dl}{d\theta} = -\frac{n}{\theta} + \sum_{i=1}^n \frac{Y^r_i}{\theta^2}
+$$
+Set the derivative equal to 0 to get the MLE:
+$$
+-\frac{n}{\theta} + \sum_{i=1}^n \frac{Y^r_i}{\theta^2} = 0 \\
+\sum_{i=1}^n \frac{Y^r_i}{\theta^2} = \frac{n}{\theta}, 
+\sum_{i=1}^n \frac{Y^r_i}{\theta} = n
+$$
+Isolating the theta estimator term returns
+$$
+\sum_{i=1}^n \frac{Y^r_i}{n} = \hat \theta
+$$
+so this it he MLE of theta.
+
+## Part C
+Is the estimator in part (b) an MVUE for theta?
+
+The MLE is an MVUE is the MLE is unbiased.
+
+Check if the expectation of the estimator is equal to theta:
+$$
+E\left(\sum_{i=1}^n Y_i^r\right) = \sum_{i=1}^n E(Y_i^r)
+$$
+
+Determining the expectation of Yr:
+$$
+E(Y^r) = \int_0^\infty y^r \cdot \frac{r}{\theta} y^{r-1} e^{-y^r / \theta} \, dy
+= \frac{1}{\theta} \int_0^\infty t e^{-t/\theta} \, dt
+= \left[ -\theta^2 \cdot e^{-t/\theta} \right]_{0}^{\infty} = \theta^2 \cdot \frac{1}{\theta} = \theta
+$$
+
+Because the expectation of Yr is equal to theta, the summation is an unbiased estimator of theta, so the estimator is an MVUE of theta.
+
+

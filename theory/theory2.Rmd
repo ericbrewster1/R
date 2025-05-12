@@ -1,0 +1,184 @@
+---
+title: "Homework 1.2"
+author: "Eric Brewster"
+date: "July 9, 2024"
+output:
+  pdf_document:
+    extra_dependencies: amsmath
+  html_document:
+    df_print: paged
+---
+ 
+```{r setup, include=FALSE}
+library(formatR)
+knitr::opts_chunk$set(echo = TRUE, eval=TRUE, tidy.opts = list(width.cutoff = 60), tidy = TRUE)
+```
+
+# Problem 1: 7.11
+A forester studying the effects of fertilization on certain pine forests in the Southeast is interested in estimating the average basal area of pine trees. In studying basal areas of similar trees for many years, he has discovered that these measurements (in square inches) are normally
+distributed with standard deviation approximately 4 square inches. If the forester samples
+n = 9 trees, find the probability that the sample mean will be within 2 square inches of the
+population mean.
+
+Here is what we are looking for in this problem: the probability that the sample mean y-bar is within two square inches of the population mean mu.
+\[
+P(|\bar{Y} - \mu| \leq 2) = P(-2 \leq \bar{Y} - \mu \leq 2)
+\]
+
+Dividing each term by standard deviation over square root n, or the number of samples:
+
+\[
+P\left( -\frac{2}{\sigma/\sqrt{n}} \leq \frac{\bar{Y} - \mu}{\sigma / \sqrt{n}} \leq \frac{2}{\sigma/\sqrt{n}} \right)
+\]
+
+As stated in the problem, the average basal areas of the trees (Y1, Y2, ..., Y9) are normally distributed with mean mu and standard deviation of 4 inches. By Theorem 7.1, y-bar has a normal sampling distribution with the following mean and variance:
+
+\[
+\mu_Y = \mu, \sigma_Y^2 = \frac{\sigma^2}{n} = \frac{16}{9}
+\]
+
+Because the central term in the previous probability expression has a normal distribution, substitute Z for the middle term using the logic below:
+
+\[
+Z = \frac{\bar{Y} - \mu_Y}{\sigma_Y} = \frac{\bar{Y} - \mu}{\sigma / \sqrt{n}}
+\]
+
+Substituting in Z for the middle term, 4 for the standard deviation, and 9 for the number of samples (and simplifying):
+
+\[
+P\left( -\frac{2}{\frac{4}{\sqrt{9}}} \leq Z \leq \frac{2}{\frac{4}{\sqrt{9}}} \right)
+= P\left( -\frac{3}{2} \leq Z \leq \frac{3}{2} \right)
+\]
+
+Using the Z-table to find the values below reveals the probability to be 0.8664.
+\[
+P(-1.5 \leq Z \leq 1.5) = P(Z \leq 1.5) - P(Z \leq -1.5)
+= 0.9932 - 0.0668 = 0.8664
+\]
+
+
+# Problem 2: 7.12
+Suppose the forester in Exercise 7.11 would like the sample mean to be within 1 square inch
+of the population mean, with probability .90. How many trees must he measure in order to
+ensure this degree of accuracy?
+
+This is the probability that the problem asks for:
+\[
+P(|\bar{Y} - \mu| \leq 1) = P[-1 \leq (\bar{Y} - \mu) \leq 1] = 0.90
+\]
+
+Dividing each term by standard deviation over square root of samples, substituting in Z for the central term given the normal distribution with the logic from question 7.11, and recalling that the standard deviation is 4 square inches:
+\[
+P\left( \frac{-1}{\sigma/\sqrt{n}} \leq \frac{\bar{Y} - \mu}{\sigma / \sqrt{n}} \leq \frac{1}{\sigma/\sqrt{n}} \right) 
+= P\left( \frac{-1}{4} \sqrt{n} \leq Z \leq \frac{1}{4}\sqrt{n} \right) = 0.90
+\]
+
+Using the z-table, 1.645 is the z-score that leaves 5 percent of samples to the right. Doubling this value gives the 0.90 confidence interval.
+\[
+P(-1.645 \leq Z \leq 1.645) = 0.90
+\]
+
+Therefore, the right term from the probability interval above (square root n over 4, or the root of samples divided by standard deviation) must equal the z-score:
+\[
+\frac{\sqrt{n}}{4} = 1.645
+\]
+
+Finishing the algebra shows that the the number of observations to include is n = 43.2964.
+
+\[
+n = (1.645 * 4)^2 = 43.2964
+\]
+
+Since it is not practical to measure a fraction of a tree, using n = 44 will slightly exceed the 0.90 threshold.
+
+
+# Problem 3: 7.26
+Refer to Exercise 7.11. Suppose that in the forest fertilization problem the population standard
+deviation of basal areas is not known and must be estimated from the sample. If a random
+sample of n = 9 basal areas is to be measured, find two statistics g1 and g2 such that P[g1 <=
+(Ybar - mu) <= g2] = .90.
+
+The question asks for statistics g1 and g2 that are a 0.90 interval where the standard deviation is not known (cannot use the same logic as 7.12 with an unknown standard deviation).
+\[
+P(|Z| \leq 1.645) = 0.90
+\]
+
+In the first step, substitute in both the definition of z and sigma/n for their values on the right. From there, you multiply both terms by the denominator of standard deviation over root samples, also removing the absolute value bars and adding the lower g1.
+
+\[
+P\left( \left| z \right| \leq \frac{g_2}{4/\sqrt{9}} \right) 
+= P\left(| \frac{\bar{Y} - \mu}{\sigma/\sqrt{n}}| \leq \frac{g_2}{\sigma/\sqrt{n}} \right) 
+= P\left( g_1 \leq \bar{Y} - \mu \leq g_2 \right) 
+= P\left( \left| z \right| \leq 1.645 \right)
+\]
+
+Working backwards with the z-score of 1.645 for 0.90 interval:
+\[
+\frac{g_2}{4/\sqrt{9}} = 1.645
+\]
+
+Rearranging the variables (and given the g1 is negative g2):
+\[
+g_2 = \frac{1.645 * 4}{\sqrt{9}} = 2.1933
+\]
+
+Final answer:
+\[
+(-2.1933, 2.1933)
+\]
+
+
+
+
+# Problem 4: 7.42
+The fracture strength of tempered glass averages 14 (measured in thousands of pounds per
+square inch) and has standard deviation 2.
+
+## Part A
+What is the probability that the average fracture strength of 100 randomly selected pieces of this glass exceeds 14.5?
+
+Here is what is given in the problem definition,
+\[
+\mu = 14, \text { }\sigma = 2, \text { and } n = 100
+\]
+
+and we are trying to approximate:
+\[
+P(\bar{Y} > 14.5)
+\]
+
+
+Since the sample size is large enough (over 30) and mean/variance are finite, the sampling distribution is normal by the central limit theorem. Given the approximately standard normal distribution, substitute in Z:
+\[
+\frac{\bar{Y} - \mu}{\sigma / \sqrt{n}}
+\]
+
+Simplify and use the z-table to reveal the final probability to be 0.0062.
+
+\[
+P(\bar{Y} > 14.5) = P\left( \frac{\bar{Y} - 14}{\frac{2}{\sqrt{100}}} > \frac{14.5 - 14}{\frac{2}{\sqrt{100}}} \right) = P(Z > 2.5) = 0.0062
+\]
+
+
+
+## Part B
+Find an interval that includes, with probability 0.95, the average fracture strength of 100
+randomly selected pieces of this glass.
+
+The 0.95 confidence interval has the z-score of 1.96.
+\[
+z_{\alpha/2} = z_{0.025} = 1.96
+\]
+
+The given sample mean is subtracted from or added to by the product of the z-score and the standard deviation. The normal distribution means that the standard deviation can be found by sigma over root n, or population standard deviation 2 and root of samples 100.
+\[
+(\bar{Y} - z_{\alpha/2} \cdot \frac{\sigma}{\sqrt{n}}, \text { } \bar{Y} + z_{\alpha/2} \cdot \frac{\sigma}{\sqrt{n}})
+\]
+
+Substituting the z-score and the values given in the problem definition,
+\[
+(14 - 1.96 \cdot \frac{2}{\sqrt{100}}, \text{ }14 + 1.96 \cdot \frac{2}{\sqrt{100}})
+= (13.608,\text { } 14.392)
+\]
+
+The interval is (13.608, 14.392).
