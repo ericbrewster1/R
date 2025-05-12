@@ -1,0 +1,220 @@
+---
+title: "Homework2_STA4241"
+author: "Eric Brewster"
+date: "2024-09-23"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+
+```{r data load}
+## Problem 2
+data2 = read.csv("Problem2.csv")
+test_data2 = read.csv("Problem2test.csv")
+
+## Problem 3
+data3 = read.csv("Problem3.csv")
+test_data3 = read.csv("Problem3test.csv")
+
+library(MASS)
+```
+
+# Problem 2
+
+Below is a function (used repeatedly) to graph boundary functions in problems 2 and 3:
+
+```{r boundary function}
+boundary <- function(model, data, class = NULL, title, ...) {
+
+  data <- data[,2:3] # x1 and x2 columns
+  plot(data, pch = NA, main = title) # create the original plot dimensions, no points
+
+  # logic: create a data frame to correctly input into predict
+  rangeDF <- sapply(data, range)
+  xSeq <- seq(rangeDF[1,1], rangeDF[2,1], length.out = 100)
+  ySeq <- seq(rangeDF[1,2], rangeDF[2,2], length.out = 100)
+  graph <- cbind(rep(xSeq, each=100), rep(ySeq, time = 100))
+  colnames(graph) <- colnames(rangeDF)
+  graph <- as.data.frame(graph)
+
+  prediction <- predict(model, graph, type = "class")
+  if(is.list(prediction)) prediction <- prediction$class
+  prediction <- as.factor(prediction)
+
+  points(graph, col = as.integer(prediction)+1L, pch = ".")
+
+  allPoints <- matrix(as.integer(prediction), nrow = 100, byrow = TRUE)
+  contour(xSeq, ySeq, allPoints, add = TRUE, drawlabels = FALSE,
+    lwd = 0)
+}
+predict.lr <- function(object, newdata, ...) # predict.glm should test if >.5
+  predict.glm(object, newdata, type = "response") > .5
+```
+
+
+```{r Problem 2 model 1}
+logit1 <- glm(Y ~ ., data = data2, family = binomial(link = "logit"))
+class(logit1) <- c("lr", class(logit1))
+predict.lr <- function(object, newdata, ...) # predict.glm should test if >.5
+  predict.glm(object, newdata, type = "response") > .5
+boundary(logit1, data2, class = "Y",  title = "Logistic Regression")
+```
+
+ 
+```{r Problem 2 model 2}
+logit2 <- glm(Y ~ X1 + (X1)^2 + X2 + (X2)^2, data = data2, family = binomial(link = "logit"))
+class(logit2) <- c("lr", class(logit2))
+boundary(logit2, data2, class = "Y", title = "Logistic Regression with Squared Terms")
+```
+
+
+```{r Problem 2 model 3}
+modelLDA <- lda(Y ~ ., data = data2)
+boundary(modelLDA, data2, class = "Y", title = "LDA")
+```
+
+
+
+```{r Problem 2 model 4}
+modelQDA <- qda(Y ~ ., data = data2)
+boundary(modelQDA, data2, class = "Y", title = "QDA")
+```
+
+Comments on differences in the approaches: After plotting the decision boundaries, QDA appears to overfit the data, though I can not confirm this without more information. The three other methods (log regression, log regression with squared terms, and LDA) produce very similar decision boundaries.
+
+
+```{r Problem 2 test logit1}
+logit1Pred = 1*(predict(logit1, newdata=test_data2, type="response") > 0.5)
+mean(logit1Pred != (test_data2$Y == 1))
+```
+
+```{r Problem 2 test logit2}
+logit2Pred = 1*(predict(logit2, newdata=test_data2, type="response") > 0.5)
+mean(logit2Pred != (test_data2$Y == "1"))
+```
+
+```{r Problem 2 test lda}
+testPredLDA = as.character(predict(modelLDA, newdata=test_data2)$class)
+mean(testPredLDA != as.character(test_data2$Y))
+```
+
+```{r Problem 2 test qda}
+testPredQDA = as.character(predict(modelQDA, newdata=test_data2)$class)
+mean(testPredQDA != as.character(test_data2$Y))
+```
+
+Comment on findings: As expected by the graphs above, the first three methods produce similar error rates; the error rate between the two logistic regression models is the same, whereas the rate is slightly higher for LDA. QDA has a an error rate of about 0.02 (2 percent) more than the logistic regressions, likely as a result of overfitting (i.e. the small portion at x1 = -2) which would incorrectly classify more points along the boundary line for the other three models.
+
+# Problem 3
+
+```{r Problem 3 LDA}
+modelLDA2 <- lda(Y ~ ., data = data3)
+boundary(modelLDA2, data3, class = "Y", title = "LDA")
+```
+
+
+```{r Problem 3 QDA}
+modelQDA2 <- qda(Y ~ ., data = data3)
+boundary(modelQDA2, data3, class = "Y", title = "QDA")
+```
+
+
+```{r Problem 3 testing lda}
+testPredLDA2 = as.character(predict(modelLDA2, newdata=test_data3)$class)
+mean(testPredLDA2 != as.character(test_data3$Y))
+```
+
+
+```{r Problem 3 testing qda}
+testPredQDA2 = as.character(predict(modelQDA2, newdata=test_data3)$class)
+mean(testPredQDA2 != as.character(test_data3$Y))
+```
+
+Comment on findings: LDA and QDA produce a generally similar graph, albeit QDA attempts to split certain sections (red, light blue) to better capture trends. Both, however, have error rates of over 50 percent! QDA's error rate is higher by 3.5 percent, likely from the split groupings chasing overfitting.
+
+
+iii. Should it concern you that your error rates are greater than 50%?
+Yes, the fact that the error rates are over 50% is concerning. This could indicate overfitting by both models, and/or that discriminant analysis is not the right model to categorize the data.
+
+
+iv. Do you think that your QDA model is an improvement on random guessing? By random
+guessing I mean randomly picking a class category with equal probability for each class.
+Yes, albeit only a slight improvement. Random guessing would be expected to yield an error rate of about 75%, as you would correctly identify about 25% of data points by class.
+
+
+# Problem 4
+
+
+```{r Problem 4}
+nSim = 100
+sampleSizes = c(50, 100, 200, 500) 
+errorMat = array(NA, dim=c(nSim, 2, length(sampleSizes)))
+
+set.seed(88970542)
+
+for (j in 1:4) {
+  n = sampleSizes[j]
+  
+  for (ni in 1:nSim) {
+    repeat {
+      X1 = rnorm(n)
+      X2 = rnorm(n)
+      epsilon = rnorm(n, mean=0, sd=1)
+      Y = ifelse(0.5 * X1^2 - 0.5 * X2 + epsilon > 0, 1, 0)
+      
+      if (length(unique(Y)) == 2) break
+    }
+    
+    data = data.frame(X1, X2, Y = as.factor(Y))
+    
+    trainIndex = sample(1:n, round(0.75 * n), replace=FALSE)
+    trainData = data[trainIndex, ]
+    testData = data[-trainIndex, ]
+    
+    modLDA = lda(Y ~ ., data=trainData)
+    modQDA = qda(Y ~ ., data=trainData)
+    
+    predLDA = predict(modLDA, newdata=testData)$class
+    predQDA = predict(modQDA, newdata=testData)$class
+    
+    errorMat[ni, 1, j] = mean(predLDA != testData$Y)
+    errorMat[ni, 2, j] = mean(predQDA != testData$Y)
+  }
+}
+
+ldaErrors = as.vector(errorMat[, 1, ])
+qdaErrors = as.vector(errorMat[, 2, ])
+combinedErrors = c(ldaErrors, qdaErrors)
+groupLabels = rep(c("LDA", "QDA"), each = nSim * length(sampleSizes))
+
+boxplot(combinedErrors ~ groupLabels, 
+        main = "Test Error Rates for LDA and QDA", 
+        ylab = "Error Rate", 
+        ylim = c(0, max(c(ldaErrors, qdaErrors))),
+        outline = TRUE)
+
+averageErrors = apply(errorMat, 3, colMeans)
+ldaAvgErrors = averageErrors[1, ]
+qdaAvgErrors = averageErrors[2, ]
+
+plot(sampleSizes, ldaAvgErrors, type = "b", col = "blue", ylim = c(0, max(c(ldaAvgErrors, qdaAvgErrors))),
+     xlab = "Sample Size", ylab = "Average Error Rate", main = "Average Error Rates for LDA and QDA")
+lines(sampleSizes, qdaAvgErrors, type = "b", col = "orange")
+
+```
+
+i. Explain how data was generated
+
+The x1 and x2 values are pulled randomly from the standard normal distribution, with a random error term (epsilon) applied to each term (also from standard normal). From there, the Y value is determined by the formula 0.5x1^2 - 0.5X2 + epsilon. This formula is intended to value each term as half of the prediction, albeit with X1 squared to make QDA more effective. This data (X1, X2, Y) is placed into a data frame (similar to data2), after which it is split into training and testing. The LDA and QDA models are fit, predictions are made, and erro rates are calculated for each.
+
+
+ii. Explain why QDA will outperform LDA in this simulation
+QDA is expected to outperform LDA in this simulation because of the X^2 term in the assignment of Y values. This create a non-linear decision boundary, meaning QDA will better capture the relationship, as QDA has a separate covariance matrix for each term.
+
+iv. As shown in the graph above, the relative performance of LDA/QDA does not change much given this simulation between a sample size of 50 and 500. QDA consistently return about 4 percent lower of an error rate.
+

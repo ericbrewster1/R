@@ -1,0 +1,285 @@
+---
+title: "HW3_STA4241"
+author: "Eric Brewster"
+date: "2024-10-05"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(caret)
+library(MASS)
+library(class)
+library(e1071)
+```
+
+# Problem 1
+
+```{r Problem 1 setup}
+crabs <- read.csv("Crabs.csv")
+```
+
+
+```{r Problem 1 Part i}
+set.seed(88970542)
+testData1 <- crabs[sample(1:173, 25), ]
+trainData1 <- crabs[!rownames(crabs) %in% rownames(testData1), ]
+
+tune.svm = tune(svm, y ~., 
+                  data=trainData1, kernel="radial",
+                  ranges=list(cost=1,
+                              gamma=c(0.001, 0.01, 0.1, 1, 2, 4, 8)))
+(fit = tune.svm$best.model)
+```
+
+Does the model begin to overfit to the training data? The model does begin to overfit the data, as the best gamma value is 0.5, round the middle of the gamma values.
+
+
+```{r Problem 1 Part ii}
+features <- crabs[, -ncol(crabs)] 
+labels <- crabs[, ncol(crabs)]      
+
+kValues <- 1:20
+
+foldSize <- 10
+n <- nrow(crabs)
+foldsList <- split(sample(1:n), rep(1:foldSize, length.out = n))
+
+results <- numeric(length(kValues))
+
+for (k in kValues) {
+  foldAccuracies <- numeric(foldSize)
+    
+  for (i in 1:foldSize) {
+    test_indices <- foldsList[[i]]
+    train_indices <- unlist(foldsList[-i])
+      
+    train_data <- features[train_indices, ]
+    train_labels <- labels[train_indices]
+    test_data <- features[test_indices, ]
+    test_labels <- labels[test_indices]
+
+    predictions <- knn(train = train_data, test = test_data, cl = train_labels, k = k)
+    foldAccuracies[i] <- mean(predictions == test_labels)
+  }
+
+  results[k] <- mean(foldAccuracies)
+}
+
+optimalK <- kValues[which.max(results)]
+optimalAccuracy <- max(results)
+
+print(data.frame(K = kValues, Accuracy = results))
+optimalK
+optimalAccuracy
+
+```
+
+Findings: The optimal k (after repeatedly running this code) tends to be 3, where most other number of K's does not reach 70% accuracy.
+
+
+
+```{r Problem 1 Part iii}
+
+errorMat = matrix(NA,100,10)
+set.seed(88970542)
+for(k in 1:100) {
+  testIndex <- sample(1:173, 25)
+  trainIndex <- setdiff(1:173, testIndex)
+  trainData <- crabs[trainIndex, ]
+  testData <- crabs[testIndex, ]
+  
+  ## First fit the GLM
+  mod = glm(y ~ ., 
+            data=trainData, family=binomial)
+  
+  testPred = 1*(predict(mod, newdata=testData, type="response") > 0.5)
+  trainPred = 1*(predict(mod, newdata=trainData, type="response") > 0.5)
+  
+  errorMat[k,1] = mean(testPred != (as.character(testData$y) == 1))
+  
+  ## Now use LDA
+  modLDAyear = lda(y ~ ., 
+                   data=trainData)
+  
+  testPredLDAyear = as.character(predict(modLDAyear, 
+                                       newdata=testData)$class)
+  
+  errorMat[k,2] = mean(testPredLDAyear != as.character(testData$y))
+  
+  ## QDA
+  modQDA = qda(y ~., 
+               data=trainData)
+  
+  testPredQDA = as.character(predict(modQDA, 
+                                     newdata=testData)$class)
+  
+  errorMat[k,3] = mean(testPredQDA != as.character(testData$y))
+  
+  ## Radial SVM
+  tune.svm = tune(svm, y ~., 
+                  data=trainData, kernel="radial",
+                  ranges=list(cost=c(0.01, 1, 5,10, 100),
+                              gamma=c(0.001, 0.01, 0.1, 1)))
+  fit = tune.svm$best.model
+  
+  predSVM = as.character(predict(fit, testData))
+  
+  errorMat[k,4] = mean(predSVM < 0.67)
+  
+  ## Polynomial SVM
+  tune.svm = tune(svm, y ~., 
+                  data=trainData, kernel="polynomial",
+                  ranges=list(cost=c(0.01, 1, 5,10, 100),
+                              degree=c(1,2,3,4)))
+  fit = tune.svm$best.model
+  
+  predSVM = as.character(predict(fit, testData))
+  
+  errorMat[k,5] = mean(predSVM < 0.67)
+  
+  ## Try KNN for a few different K values
+  knnTrainY = trainData$y
+  knnTestY = testData$y
+  
+  knnDat = trainData
+  knnDat$y = NULL
+  
+  knnTestDat = testData
+  knnTestDat$y = NULL
+  
+  knnPred5 = as.character(knn(train=knnDat, 
+                                 test=knnTestDat, cl=knnTrainY, k=5)) 
+  knnPred10 = as.character(knn(train=knnDat, 
+                                  test=knnTestDat, cl=knnTrainY, k=10)) 
+  knnPred20 = as.character(knn(train=knnDat, 
+                                  test=knnTestDat, cl=knnTrainY, k=20))
+  knnPred50 = as.character(knn(train=knnDat, 
+                                  test=knnTestDat, cl=knnTrainY, k=50)) 
+  knnPred100 = as.character(knn(train=knnDat, 
+                                   test=knnTestDat, cl=knnTrainY, k=100)) 
+  
+  errorMat[k,6] = mean(knnPred5 != as.character(testData$y))
+  errorMat[k,7] = mean(knnPred10 != as.character(testData$y))
+  errorMat[k,8] = mean(knnPred20 != as.character(testData$y))
+  errorMat[k,9] = mean(knnPred50 != as.character(testData$y))
+  errorMat[k,10] = mean(knnPred100 != as.character(testData$y))
+  
+}
+
+## Look at the average error across the K volds
+apply(errorMat, 2, mean, na.rm=TRUE)
+```
+
+Which algorithm has the best performance, on average across the 100 testing data sets? The algorithm with the best performance is LDA, although KNN5 and logistic regression are close behind.
+
+
+```{r Problem 1 Part iiib}
+boxplot(errorMat, 
+        main = "Error Rates", 
+        xlab = "Estimator", 
+        ylab = "Error Rate", 
+        col = rainbow(ncol(errorMat)),
+        names = c("GLM", "LDA", "QDA", "Rad", "Poly", 
+                  "K5", "K10", "K20", "K50", "K100"),  # Column names
+        outline = TRUE)
+```
+
+Findings: GLM, LDA, and K5 (the three lowest error rates from above) have similarly sized boxplots as well. The SVM methods have a larger range and error rates. The KNN box plots are all relatively similar, K10 + K20 + K50.
+
+# Problem 2
+
+Problem 2i. The value of q_0.6 is 6 when the distribution is known.
+
+Problem 2ii. If we do not know the distribution, a good estimator of q_0.6 is the 60th value (X_i where i = 60) when the 100 values are sorted from least at X1 to greatest at X100.
+
+```{r Problem 2iii}
+uniform <- runif(100, 0, 10)
+uniformSorted <- sort(uniform)
+(estimate <- uniformSorted[60])
+
+bootCI <- numeric(10000)
+for(i in 1:10000) {
+  bootSample <- sample(uniform, 100, replace = TRUE)
+  bootCI[i] <- quantile(bootSample, probs = 0.6)
+}
+
+quantile(bootCI, c(0.025, 0.975))
+```
+
+```{r Problem 2iv}
+coveredPercentile <- 0
+coveredSE <- 0
+set.seed(88970542)
+for(i in 1:1000) {
+  uniformDist <- runif(100, 0, 10)
+  uniformDistSorted <- sort(uniformDist)
+  q6hat <- uniformDistSorted[60]
+  
+  studyCI <- numeric(1000)
+  for(j in 1:1000) {
+    studySample <- sample(uniformDist, 100, replace = TRUE)
+    studyCI[j] <- quantile(studySample, probs = 0.6)
+  }
+  
+  percentileCI <- quantile(studyCI, c(0.025, 0.975))
+  
+  meanStudyCI <- mean(studyCI)
+  se <- sqrt((1 / 999) * sum((studyCI - meanStudyCI) ^ 2))
+  lowerSE <- q6hat - 1.96 * se
+  upperSE <- q6hat + 1.96 * se
+  
+  if(6 >= percentileCI[1] && 6 <= percentileCI[2]) {
+    coveredPercentile <- coveredPercentile + 1
+  }
+  
+  if(6 >= lowerSE && 6 <= upperSE) {
+    coveredSE <- coveredSE + 1
+  }
+}
+
+(percentileCoverage <- coveredPercentile / 10)
+(seCoverage <- coveredSE / 10)
+```
+
+In what percentage of your simulations do the bootstrap intervals cover the true parameter? In these simulations, the percentile method covers the true parameter in 94.8% of trials, whereas the standard error method covers the true parameter in 92.8% of trials.
+
+```{r Problem 2v}
+coveredPercentile <- 0
+coveredSE <- 0
+set.seed(88970542)
+for(i in 1:1000) {
+  uniformDist <- runif(100, 0, 10)
+  uniformDistSorted <- sort(uniformDist)
+  q6hat <- uniformDistSorted[60]
+  
+  studyCI <- numeric(1000)
+  for(j in 1:1000) {
+    studySample <- sample(uniformDist, 100, replace = TRUE)
+    studyCI[j] <- quantile(studySample, probs = 0.6)
+  }
+  
+  percentileCI <- quantile(studyCI, c(0.005, 0.995))
+  
+  meanStudyCI <- mean(studyCI)
+  se <- sqrt((1 / 999) * sum((studyCI - meanStudyCI) ^ 2))
+  lowerSE <- q6hat - 2.575* se
+  upperSE <- q6hat + 2.575* se
+  
+  if(6 >= percentileCI[1] && 6 <= percentileCI[2]) {
+    coveredPercentile <- coveredPercentile + 1
+  }
+  
+  if(6 >= lowerSE && 6 <= upperSE) {
+    coveredSE <- coveredSE + 1
+  }
+}
+
+(percentileCoverage <- coveredPercentile / 10)
+(seCoverage <- coveredSE / 10)
+```
+
+Differences: As expected, both values increased to near 99 percent, though the percentile method remains higher than the se method. I imagine this is because the percentile method is better for non-normal data (uses observed values, not known distribution).

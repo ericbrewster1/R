@@ -1,0 +1,149 @@
+---
+title: "HW4STA4241"
+author: "Eric Brewster"
+date: "2024-11-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+```
+
+
+```{r Question 1 data}
+prob1Data <- read.csv("Problem1.csv")
+```
+
+
+```{r Question 1i}
+X <- as.matrix(prob1Data[1:52])
+Y <- as.matrix(prob1Data$y)
+
+beta <- rep(0,52)
+
+r <- Y - X %*% beta
+
+softThreshold <- function(x, lambda) {
+  return(sign(x) * max(abs(x) - lambda, 0))
+}
+
+coordinateDescentStep <- function(X, Y, beta, lambda) {
+  r <- Y - X %*% beta
+
+  p <- length(beta)
+  
+  for (j in 1:p) {
+    r_j <- r + X[, j] * beta[j]
+    
+    beta_jNew <- softThreshold(t(X[, j]) %*% r_j / sum(X[, j]^2), lambda)
+    
+    beta[j] <- beta_jNew
+    
+    r <- r_j - X[, j] * beta[j]
+  }
+  
+  return(beta)
+}
+
+lambda <- 0.5
+
+betaUpdated <- coordinateDescentStep(X, Y, beta, lambda)
+
+betaUpdated
+```
+
+
+```{r Question 1ii}
+library(glmnet)
+
+X <- as.matrix(prob1Data[1:52])
+Y <- as.matrix(prob1Data$y)
+
+lasso2 <- glmnet(X, Y, alpha = 1, intercept = FALSE, lambda = 0.5)
+coef(lasso2)
+```
+Similar values for x1 and x2
+
+
+```{r Question 1iii}
+coordinateDescent <- function(X, Y, beta, lambda, tol = 1e-6) {
+  for (iter in 1:1000) {
+    betaOld <- beta
+
+    beta <- coordinateDescentStep(X, Y, beta, lambda)
+    
+    if (sum(abs(beta - betaOld)) < tol) {
+      break
+    }
+  }
+  return(beta)
+}
+
+lambdaValues <- seq(0, 2, length.out = 100)
+
+coefficients <- matrix(NA, nrow = ncol(X), ncol = length(lambdaValues))
+
+for (i in 1:length(lambdaValues)) {
+  lambda <- lambdaValues[i]
+  beta <- rep(0, ncol(X))
+  
+  coefficients[, i] <- coordinateDescent(X, Y, beta, lambda)
+}
+
+matplot(log(lambdaValues), t(coefficients), type = "l", lty = 1, col = 1:ncol(X),
+        xlab = "Log(Lambda)", ylab = "Coefficients", main = "Lasso Coefficients vs. Log(Lambda)")
+
+```
+
+
+
+
+```{r Question 4 data}
+prob4Train <- read.csv("Problem4train.csv")
+prob4Test <- read.csv("Problem4testing.csv")
+```
+
+
+```{r Question 4a}
+library(tree)
+
+fit = tree(y ~ ., data=prob4Train)
+
+cv.fit = cv.tree(fit)
+plot(cv.fit$size, cv.fit$dev, type='b')
+
+prune.fit = prune.tree(fit, best=5)
+
+plot(prune.fit)
+text(prune.fit, digits=2)
+
+predictFit = predict(fit, newdata=prob4Test)
+
+mean((prob4Test$y - predictFit)^2)
+```
+
+
+```{r Question 4b}
+library(randomForest)
+
+fit2 = randomForest(y ~ ., data=prob4Train, mtry = 10, ntrees = 1000)
+
+predictFit2 = predict(fit2, newdata=prob4Test)
+
+mean((prob4Test$y - predictFit2)^2)
+```
+
+
+```{r Question 4c}
+library(gam)
+
+gamFit <- gam(y ~ s(x1, df = 4) + s(x2, df = 4) + s(x3, df = 4) + s(x4, df = 4) + s(x5, df = 4) + s(x6, df = 4) + s(x7, df = 4) + s(x8, df = 4) + s(x9, df = 4) + s(x10, df = 4), data = prob4Train)
+
+gamPredict <- predict(gamFit, newdata = prob4Test)
+
+mean((gamPredict - prob4Test$y)^2)
+```
+
+
+

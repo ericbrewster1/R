@@ -1,0 +1,179 @@
+---
+title: "Homework1STA4241"
+author: "Eric Brewster"
+date: "2024-09-08"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+
+```{r Question 2 Setup}
+library(class)
+library(caret)
+load("Problem2.dat")
+x1 = data$x1
+x2 = data$x2
+xrandom = data$xrandom
+y = data$y
+#rm(list=ls())
+```
+
+
+Question 2ai: You would expect the error rates to be very similar given the large sample size and normal distribution.
+
+
+```{r Question 2aii}
+df <- data.frame(x1 = data$x1, x2 = data$x2, y = data$y)
+trainData <- df[1:500, ]
+testData <- df[501:1000, ]
+
+bayesClassifier <- function(x1, x2) {
+  prob <- pnorm(0.5 * x1 - 0.4 * x2)
+  return(ifelse(prob > 0.5, 1, 0))
+}
+
+trainPredictions <- bayesClassifier(trainData$x1, trainData$x2)
+trainErrorRate <- mean(trainPredictions != trainData$y)
+
+testPredictions <- bayesClassifier(testData$x1, testData$x2)
+testErrorRate <- mean(testPredictions != testData$y)
+```
+The training error rate is: 0.328
+The testing error rate is: 0.312
+
+
+```{r Question 2aiii}
+trainX <- trainData[, c("x1", "x2")]
+trainY <- trainData$y
+testX <- testData[, c("x1", "x2")]
+testY <- testData$y
+
+preProc <- preProcess(trainX, method = c("center", "scale"))
+trainX <- predict(preProc, trainX)
+testX <- predict(preProc, testX)
+
+knnPredictions <- knn(train = trainX, test = testX, cl = trainY, k = 3)
+testErrorRate <- mean(knnPredictions != testY)
+```
+The test error rate now is 0.39.
+
+Question 2aiv: As the error rate is significantly higher using k = 3, I think this is not the best choice of k. There is likely too much variance within each cluster, leading to a higher test error rate.
+
+
+```{r Question 2av}
+kValues <- 1:20
+errorRates <- numeric(length(kValues))
+
+for (k in kValues) {
+  knnPredictions <- knn(train = trainX, test = testX, cl = trainY, k = k)
+  errorRates[k] <- mean(knnPredictions != testY)
+}
+
+plot(kValues, errorRates, type = "b", pch = 19, col = "blue",
+     xlab = "Number of Neighbors (k)", ylab = "Test Error Rate",
+     main = "Test Error Rate vs. Number of Neighbors (k)")
+```
+From the plot above, the optimal number of neighbors is 7; this number of neighbors gives the lowest error rate.
+
+Question 2avi: At the optimal number of neighbors (in the range of 7-10), the error rates are near the error rates obtained in part aii, indicating that KNN does a good job of approximating the Bayes classifier.
+
+
+```{r Question 2avii}
+df <- data.frame(x1 = data$x1, x2 = data$x2, xrandom = data$xrandom, y = data$y)
+trainData <- df[1:500, ]
+testData <- df[501:1000, ]
+
+trainX <- trainData[, !names(trainData) %in% "y"]
+trainY <- trainData$y
+testX <- testData[, !names(testData) %in% "y"]
+testY <- testData$y
+
+preProc <- preProcess(trainX, method = c("center", "scale"))
+trainX <- predict(preProc, trainX)
+testX <- predict(preProc, testX)
+
+knnPredictions <- knn(train = trainX, test = testX, cl = trainY, k = 40)
+
+testErrorRate <- mean(knnPredictions != testY)
+```
+The test error rate is now 0.412.
+
+Question 2aviii: In short, more is not always better with KNN. That is, adding increasingly mroe neighbors does not necessarily decrease error rate.
+
+
+```{r Question 3 Setup}
+library(ISLR)
+data(Smarket)
+head(Smarket)
+```
+
+
+```{r Question 3a}
+Smarket$yearsSince2001 <- Smarket$Year - 2001
+stockModel <- lm(Today ~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + yearsSince2001 + Volume, data = Smarket)
+summary(stockModel)
+```
+
+
+Question 3ai: I created a new variable that converts the year to a number of years since 2001. This converts the year to integer values such as 0, 1, etc. that are similar to the lag values and volume.
+
+
+```{r Question 3aii}
+nullStocks <- lm(Today ~ 1, data = Smarket)
+anovaStocks <- anova(nullStocks, stockModel)
+anovaStocks
+```
+Given the test statistic of 0.5715 and the p-value of 0.7795, there is not sufficient evidence to claim that the covariates are predictive of the outcome.
+
+
+```{r Question 3aiii}
+lag1Poly <- lm(Today ~ poly(Lag1, 3) + Lag2 + Lag3 + Lag4 + Lag5 + yearsSince2001 + Volume, data = Smarket)
+anova(stockModel, lag1Poly)
+```
+This model, with lag1 having a 3 degrees of freedom polynomial, fits the model worse than with each term linear.
+
+
+```{r Question 3bi}
+set.seed(12345)
+trainIndex <- sample(1:nrow(Smarket), size = 625, replace = FALSE)
+SmarketTrain <- Smarket[trainIndex, ]
+SmarketTest <- Smarket[-trainIndex, ]
+
+trainX <- SmarketTrain[, c("Lag1", "Lag2", "Lag3", "Lag4", "Lag5", "Year", "Volume")]
+trainY <- SmarketTrain$Direction
+testX <- SmarketTest[, c("Lag1", "Lag2", "Lag3", "Lag4", "Lag5", "Year", "Volume")]
+testY <- SmarketTest$Direction
+
+trainY <- as.factor(trainY)
+testY <- as.factor(testY)
+
+normalize <- function(x) {
+  return((x - min(x)) / (max(x) - min(x)))
+}
+
+trainXNormalized <- as.data.frame(lapply(trainX, normalize))
+testXNormalized <- as.data.frame(lapply(testX, normalize))
+
+kValues <- 1:20
+errors <- numeric(length(kValues))
+
+for (k in kValues) {
+  predictions <- knn(trainXNormalized, testXNormalized, trainY, k = k)
+  errorRate <- mean(predictions != testY)
+  errors[k] <- errorRate
+}
+
+bestK <- which.min(errors)
+bestK
+min(errors)
+```
+
+
+Question 3bii: A near 0.5 error rate indicates that the covariates are not particularly predictive of the outcome.
+
+

@@ -1,0 +1,413 @@
+---
+title: "Final Project STA4241"
+author: "Eric Brewster"
+date: "2024-11-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r libraries}
+library(dplyr)
+library(tree)
+library(boot)
+library(splines)
+library(MASS)
+library(e1071)
+library(car)
+library(DescTools)
+library(glmnet)
+library(spls)
+library(leaps)
+```
+
+```{r data load}
+load("NHANESdata.dat")
+
+Y = data$Y
+X = data$X
+C = data$C
+
+## The outcome is standardized leukocyte telomere length
+hist(Y)
+
+## There are 18 exposures in X to examine
+head(X)
+
+## There are 12 covariates in C to adjust for in addition to X
+head(C)
+
+Y <- as.data.frame(Y)
+X <- as.data.frame(X)
+C <- as.data.frame(C)
+dataNew <- cbind(Y, X, C)
+
+```
+
+```{r simple linear regression}
+linearResults <- list()
+
+for(exposure in names(X)) {
+  formula <- as.formula(paste("V1 ~", exposure))
+  model <- lm(formula, data = dataNew)
+  linearResults[[exposure]] <- summary(model)$coefficients[2,4]
+}
+
+linearResults
+```
+
+
+```{r multiple linear regression}
+summary(lm(Y ~ X, data = data))
+```
+
+
+```{r multiple linear regression}
+summary(lm(Y ~ X + C, data = data))
+```
+
+
+```{r}
+summary(lm(Y ~ C, data = data))
+```
+
+
+```{r}
+cor(X)
+```
+
+
+```{r}
+image(cor(X))
+```
+
+
+```{r}
+justPCB <- X[, 1:11]
+image(cor(justPCB))
+```
+
+
+```{r}
+baseModel <- lm(V1 ~ ., data = dataNew)
+vif(baseModel)
+```
+
+
+```{r}
+## Find ridge regression estimates
+fitRidge = glmnet(x = data$X, y = data$Y, alpha = 0)
+plot(fitRidge, xvar="lambda", xlab="Log Lambda", main="Ridge estimates")
+
+## CV curve for ridge regression
+fitRidgeCV = cv.glmnet(x = data$X, y = data$Y, alpha = 0)
+plot(fitRidgeCV)
+```
+
+
+```{r}
+## Lasso estimates
+fitLasso = glmnet(x = data$X, y = data$Y, alpha = 1)
+plot(fitLasso, xvar="lambda", xlab="Log Lambda", main="Lasso estimates")
+
+## CV curve for lasso
+fitLassoCV = cv.glmnet(x = data$X, y = data$Y, alpha = 1)
+plot(fitLassoCV)
+```
+
+```{r}
+dataStep <- data.frame(V1 = dataNew$V1, X, C)
+
+nullModel <- lm(V1 ~ ., data = data.frame(V1 = dataNew$V1, C))
+fullModel <- lm(V1 ~ ., data = data.frame(V1 = dataNew$V1, data$X, C))
+
+stepModel <- step(nullModel, scope = list(nullModel, fullModel), 
+                  direction = "both")
+```
+
+
+```{r}
+fit = regsubsets(V1 ~ ., data = dataNew, nvmax = 30)
+fitSummary = summary(fit)
+```
+
+
+```{r}
+fitForward = regsubsets(V1 ~ ., data = dataNew, nvmax = 30, method = "forward")
+fitSummaryFWD = summary(fitForward)
+```
+
+
+```{r}
+fitBackward = regsubsets(V1 ~ ., data = dataNew, nvmax = 30, method = "backward")
+fitSummaryBWD = summary(fitBackward)
+```
+
+
+```{r}
+par(mfrow=c(3,3), pty='s')
+
+## Adjusted R2
+plot(fitSummary$adjr2, type='l', lwd=3, main="Best subset",
+     ylab="Adjusted R2", xlab="# covariates included", cex.main=1.6,
+     cex.lab=1.4)
+abline(v = which.max(fitSummary$adjr2))
+plot(fitSummaryFWD$adjr2, type='l', lwd=3, main="Forward",
+     ylab="Adjusted R2", xlab="# covariates included", cex.main=1.6,
+     cex.lab=1.4)
+abline(v = which.max(fitSummaryFWD$adjr2))
+plot(fitSummaryBWD$adjr2, type='l', lwd=3, main="Backward",
+     ylab="Adjusted R2", xlab="# covariates included", cex.main=1.6,
+     cex.lab=1.4)
+abline(v = which.max(fitSummaryBWD$adjr2))
+
+## BIC
+plot(fitSummary$bic, type='l', lwd=3, main="Best subset",
+     ylab="BIC", xlab="# covariates included", cex.main=1.6,
+     cex.lab=1.4)
+abline(v = which.min(fitSummary$bic))
+plot(fitSummaryFWD$bic, type='l', lwd=3, main="Forward",
+     ylab="BIC", xlab="# covariates included", cex.main=1.6,
+     cex.lab=1.4)
+abline(v = which.min(fitSummaryFWD$bic))
+plot(fitSummaryBWD$bic, type='l', lwd=3, main="Backward",
+     ylab="BIC", xlab="# covariates included", cex.main=1.6,
+     cex.lab=1.4)
+abline(v = which.min(fitSummaryBWD$bic))
+
+## AIC (cp and AIC are the same in this case)
+plot(fitSummary$cp, type='l', lwd=3, main="Best subset",
+     ylab="AIC", xlab="# covariates included", cex.main=1.6,
+     cex.lab=1.4)
+abline(v = which.min(fitSummary$cp))
+plot(fitSummaryFWD$cp, type='l', lwd=3, main="Forward",
+     ylab="AIC", xlab="# covariates included", cex.main=1.6,
+     cex.lab=1.4)
+abline(v = which.min(fitSummaryFWD$cp))
+plot(fitSummaryBWD$cp, type='l', lwd=3, main="Backward",
+     ylab="AIC", xlab="# covariates included", cex.main=1.6,
+     cex.lab=1.4)
+abline(v = which.min(fitSummaryBWD$cp))
+
+```
+
+
+```{r}
+which.max(fitSummary$adjr2)
+which.max(fitSummaryFWD$adjr2)
+which.max(fitSummaryBWD$adjr2)
+```
+
+
+```{r}
+which.min(fitSummary$bic)
+which.min(fitSummaryFWD$bic)
+which.min(fitSummaryBWD$bic)
+```
+
+
+```{r}
+which.min(fitSummary$cp)
+which.min(fitSummaryFWD$cp)
+which.min(fitSummaryBWD$cp)
+```
+
+
+```{r}
+fitRidgeCV$lambda.min
+fitRidgeCV$lambda.1se
+
+fitLassoCV$lambda.min
+fitLassoCV$lambda.1se
+```
+
+
+```{r}
+library(pls)
+pcr = pcr(V1 ~ ., data=dataNew, scale=TRUE, ncomp=10)
+
+```
+
+
+```{r}
+set.seed(123)
+
+error = matrix(NA, 100, 4)
+
+for(i in 1:100) {
+  trainIndex <- sample(nrow(dataNew), 750)
+  dataTrain <- dataNew[trainIndex, ]
+  dataTest <- dataNew[-trainIndex, ]
+  
+  ## Regular least squares
+  mod1 = lm(V1 ~ ., data=dataTrain)
+  pred1 = predict(mod1, newdata = dataTest)
+  error[i,1] = mean((pred1 - dataTest$V1)^2)
+  
+  # ridge
+  mod2 = cv.glmnet(as.matrix(dataTrain[, 2:31]), dataTrain[, 1], alpha = 0)
+  best_lambda_ridge <- mod2$lambda.min
+  pred2 <- predict(mod2, s = best_lambda_ridge, newx = as.matrix(dataTest[, 2:31]))
+  error[i,2] = mean((pred2 - dataTest$V1)^2)
+  
+  # lasso
+  mod3 = cv.glmnet(as.matrix(dataTrain[, 2:31]), dataTrain[, 1], alpha = 1)
+  best_lambda_lasso <- mod3$lambda.min
+  pred3 <- predict(mod3, s = best_lambda_lasso, newx = as.matrix(dataTest[, 2:31]))
+  error[i,3] = mean((pred3 - dataTest$V1)^2)
+  
+  # pcr
+  mod4 = pcr(V1 ~ ., data=dataTrain, scale=TRUE, ncomp=10)
+  pred4 = predict(mod4, newdata = dataTest)
+  error[i,4] = mean((pred4 - dataTest$V1)^2)
+}
+
+head(error)
+```
+
+
+```{r}
+avg_error <- apply(error, 2, mean)  # Average error for each model
+sd_error <- apply(error, 2, sd)     # Standard deviation of errors for each model
+
+# Print average errors and standard deviations
+data.frame(Model = c("OLS", "Ridge", "Lasso", "PCR"),
+           Average_Error = avg_error,
+           SD_Error = sd_error)
+
+barplot(avg_error, 
+        names.arg = c("OLS", "Ridge", "Lasso", "PCR"),
+        main = "Average Error for Each Model",
+        ylab = "Average Mean Squared Error",
+        col = "skyblue", 
+        border = "blue",
+        ylim = c(0, max(avg_error) + 0.05))  # Adjust ylim to make the plot clearer
+
+# Optionally, add error bars for the standard deviation
+arrows(1:4, avg_error - sd_error, 1:4, avg_error + sd_error, 
+       angle = 90, code = 3, length = 0.1, col = "red")
+```
+
+
+```{r}
+# Create a boxplot to compare the distribution of errors
+boxplot(error, 
+        names = c("OLS", "Ridge", "Lasso", "PCR"),
+        main = "Error Distribution by Model",
+        ylab = "Mean Squared Error",
+        col = c("lightgreen", "lightblue", "lightcoral", "lightyellow"))
+
+```
+
+
+```{r}
+library(mgcv)
+
+nonDemo <- cbind(colnames(dataNew)[2:19], colnames(dataNew)[25:31])
+
+# Fit a GAM model with smooth terms for all predictors
+formula_gam <- as.formula(paste("V1 ~", paste("s(", colnames(dataNew)[2:19], ")", collapse = " + ")))
+mod_gam <- gam(formula_gam, data = dataNew)
+
+# Summary of the GAM model
+summary(mod_gam)
+
+# Plot smooth terms
+par(mfrow = c(3, 3))  # Adjust layout as needed
+plot(mod_gam, se = TRUE)
+
+# Compare with a linear model
+mod_linear <- lm(V1 ~ ., data = dataNew)
+AIC(mod_linear, mod_gam)
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r tree}
+tree1 <- tree(Y~X, data = data)
+plot(tree1)
+text(tree1, digits = 2)
+```
+
+```{r}
+tree2 <- tree(V1 ~., data = dataTrain)
+plot(tree2)
+text(tree2, digits = 2)
+```
+
+
+```{r}
+cv.fit = cv.tree(tree2)
+plot(cv.fit$size, cv.fit$dev, type='b')
+```
+
+
+```{r}
+library(randomForest)
+
+## Out of sample prediction
+predictFit = predict(tree2, newdata=dataTest[, 2:31])
+
+## MSE
+mean((dataTest[, 1] - predictFit)^2)
+
+
+## Let's try random forests with m=5
+fitRF = randomForest(V1 ~ ., data=dataTrain, mtry=5)
+predictRF = predict(fitRF, newdata=dataTest[, 2:31])
+
+## MSE for random forests
+mean((dataTest[, 1] - predictRF)^2)
+
+## Let's try random forests with m=5
+fitRF = randomForest(V1 ~ ., data=dataTrain, mtry=10)
+predictRF = predict(fitRF, newdata=dataTest[, 2:31])
+
+## MSE for random forests
+mean((dataTest[, 1] - predictRF)^2)
+
+## Let's try random forests with m=5
+fitRF = randomForest(V1 ~ ., data=dataTrain, mtry=25)
+predictRF = predict(fitRF, newdata=dataTest[, 2:31])
+
+## MSE for random forests
+mean((dataTest[, 1] - predictRF)^2)
+
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
