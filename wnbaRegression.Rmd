@@ -1,0 +1,212 @@
+---
+title: "WNBA Team Points Regression"
+author: "Eric Brewster"
+date: "1/24/2024"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r data1}
+## Read data
+wnba <- read.csv(
+ "http://users.stat.ufl.edu/~winner/data/wnba_20102019_ATS_OU.csv")
+head(wnba)
+
+## Create predicted score for team from Over/Under and point spread
+##   If team is favored, tmSprd is negative
+teamPred <- (wnba$OU-wnba$tmSprd)/2
+teamPts <- wnba$teamPts
+```
+
+# Statistics for team predictions and actual points scored
+
+```{r stats1}
+summary(teamPred); sd(teamPred)
+summary(teamPts); sd(teamPts)
+
+## Correlation between Actual and predicted points
+(rho <- cor(teamPts, teamPred))
+```
+
+
+# Fit regression model for POPULATION of team games
+#   Y = Actual points scored, X = predicted points
+```{r popreg1}
+wnba.pts <- lm(teamPts ~ teamPred)
+summary(wnba.pts)
+anova(wnba.pts)
+
+## Obtain population beta's and sigma^2
+(sigma2 <- deviance(wnba.pts) / length(teamPts))
+(beta0 <- wnba.pts$coef[1])
+(beta1 <- wnba.pts$coef[2])
+```
+
+# Test $H_0: \beta_0$ = 0, $\beta_1$=1 treating as a sample from conceptual pop
+```{r beta0beta1}
+wnba.pts.01 <- lm(teamPts ~ -1 + offset(teamPred))
+summary(wnba.pts.01)
+anova(wnba.pts.01)
+anova(wnba.pts.01, wnba.pts)
+```
+## Test stat: F* = .9406, P-value = 0.3905, so you fail to reject the null hypothesis
+
+# Plot Y vs X and add lines for: OLS, Line of Equality, Mean(Y)
+
+```{r plot_reg}
+plot(teamPts ~ teamPred, pch=16, cex=.6, xlab="Team Predicted Score",
+   ylab="Team Points", main="WNBA Team Points 2010-2019")
+abline(wnba.pts, col="red", lwd=2)
+abline(a=0,b=1,col="blue", lwd=2)
+abline(h=mean(teamPts), col="darkgreen", lwd=2)
+legend("topleft", c("OLS", "Equality", "Mean(Y)"), 
+     lty=1, col=c("red", "blue", "darkgreen"), cex=0.7)
+```
+
+# Histogram of model errors ($\epsilon$)
+
+```{r hist_eps}
+hist(resid(wnba.pts), breaks=50, freq=FALSE, col="pink",
+    xlab=expression(epsilon), 
+    main=expression(paste("Population Errors ", epsilon)))
+res.seq <- seq(min(resid(wnba.pts)), max(resid(wnba.pts)), length=1000)
+lines(res.seq, dnorm(res.seq, 0, sqrt(sigma2)), col="purple", lwd=2)
+```
+
+# Begin taking random samples
+
+```{r sampling}
+
+set.seed(8897)
+num.sample <- 100000          ## Number of Random Samples
+N <- length(teamPts)          ## Number of team games in population
+n <- 40                      ## Number of team games in each sample
+df <- 38
+
+## Variables to hold summary values from each sample
+Xbar <- numeric(num.sample)   
+Ybar <- numeric(num.sample)
+SS_XX <- numeric(num.sample)
+SS_XY <- numeric(num.sample)
+SS_YY <- numeric(num.sample)
+
+## Take samples and save summary values from each sample
+for (i1 in 1:num.sample) {
+  sample.tm <- sample(N, n, replace=FALSE)
+  X <- teamPred[sample.tm]
+  Y <- teamPts[sample.tm]
+  Xbar[i1] <- mean(X)
+  Ybar[i1] <- mean(Y)
+  SS_XX[i1] <- sum((X-Xbar[i1])^2)
+  SS_XY[i1] <- sum((X-Xbar[i1])*(Y-Ybar[i1]))
+  SS_YY[i1] <- sum((Y-Ybar[i1])^2)
+}
+```
+
+# Compute estimates of regression coefficients, correlation, and variance for samples and SSE(R) for $H_0:\beta_0=0,\beta_1=1$
+
+```{r estimates}
+b1 <- SS_XY/SS_XX
+b0 <- Ybar - b1*Xbar
+r <- SS_XY/sqrt(SS_XX*SS_YY)
+SSE <- SS_YY - SS_XY^2/SS_XX
+s2 <- SSE/df
+sumY2 <- SS_YY + n*Ybar^2
+sumX2 <- SS_XX + n*Xbar^2
+sumXY <- SS_XY + n*Xbar*Ybar
+SSE.R <- sumY2 + sumX2 - 2*sumXY
+```
+# Compute estimated standard errors of regression coefficients
+
+```{r stderr}
+SE.b1 <- sqrt(s2/SS_XX)
+SE.b0 <- sqrt(s2*(1/n+Xbar^2/SS_XX))
+```
+# Obtain 95% Confidence Intervals for $\beta_0$, $\beta_1$, $\sigma^2$, $\rho$
+
+#  Obtain the coverage rates and Pr{$H_0:\beta_0=0,\beta_1=1$} rejects $H_0$
+
+```{r ci}
+t.975 <- qt(.975, df)
+X2.025 <- qchisq(.025, df)
+X2.975 <- qchisq(.975, df)
+F.95 <- qf(.95,2,n-2)
+
+beta0.LB <- b0 - t.975 * SE.b0
+beta1.LB <- b1 - t.975 * SE.b1
+beta0.UB <- b0 + t.975 * SE.b0
+beta1.UB <- b1 + t.975 * SE.b1
+sigma2.LB <- df * s2 / X2.975
+sigma2.UB <- df * s2 / X2.025
+fisher_z <- 0.5*log((1+r)/(1-r))
+fisher_z.LB <- fisher_z-1.96*sqrt(1/(n-3))
+fisher_z.UB <- fisher_z+1.96*sqrt(1/(n-3))
+rho.LB <- (exp(2*fisher_z.LB)-1)/(exp(2*fisher_z.LB)+1)
+rho.UB <- (exp(2*fisher_z.UB)-1)/(exp(2*fisher_z.UB)+1)
+GLT.F <- ((SSE.R-SSE)/2)/(SSE/(n-2))
+
+sum(beta0.LB <= beta0 & beta0.UB >= beta0) / num.sample
+sum(beta1.LB <= beta1 & beta1.UB >= beta1) / num.sample
+sum(sigma2.LB <= sigma2 & sigma2.UB >= sigma2) / num.sample
+sum(rho.LB <= rho & rho.UB >= rho) / num.sample
+sum(GLT.F >= F.95) / num.sample
+```
+## Coverage rates: Beta0 = 95.47%, Beta1 = 95.35%, Sigma2 = 95.15%, and Rho = 95.45%
+## 4.82% of samples reject the null hypothesis
+
+# Plot histograms of b0 and b1 from the samples
+
+```{r b0b1}
+par(mfrow=c(1,2))
+hist(b0, breaks=100, xlab=expression(b[0]), col="green",
+     main=(expression(paste("Sampling Distribution of ", b[0]))))
+abline(v=beta0, col="blue", lwd=2)
+
+hist(b1, breaks=100, xlab=expression(b[1]), col="green",
+     main=(expression(paste("Sampling Distribution of ", b[1]))))
+abline(v=beta1, col="blue", lwd=2)
+```
+
+# Plot histograms of t(b0) and t(b1) from the samples
+# $t(b_k) = \frac{b_k-\beta_k}{s\{b_k\}}$
+
+```{r tb}
+par(mfrow=c(1,2))
+hist((b0-beta0)/SE.b0, breaks=100, freq=FALSE, col="orange",
+     xlab=expression(t(b[0])),
+     main=(expression(paste("Sampling Distribution of ", t(b[0])))))
+lines(seq(-4,4,.01), dt(seq(-4,4,.01), df), col="blue", lwd=2)
+
+hist((b1-beta1)/SE.b1, breaks=100, freq=FALSE, col="orange",
+     xlab=expression(t(b[1])),
+     main=(expression(paste("Sampling Distribution of ", t(b[1])))))
+lines(seq(-4,4,.01), dt(seq(-4,4,.01), df), col="blue", lwd=2)
+
+par(mfrow=c(1,1))
+```
+
+
+
+# Plot histogram of $\frac{(n-2)s^2}{\sigma^2}$ and Chi-square distribution
+
+```{r s2}
+max.X2 <- max(df*s2/sigma2)                              ## Used for plotting grid
+hist(df*s2/sigma2, breaks=100, freq=FALSE, col="orange",
+     xlab=expression(paste(frac((n-2)*s^2,sigma^2))),
+     main=(expression(paste("Sampling Distribution of ", 
+       frac((n-2)*s^2,sigma^2)))))
+lines(seq(0,max.X2, 0.1), dchisq(seq(0,max.X2,0.1), df), col="blue", lwd=2)
+```
+
+# Plot histogram of r from the samples
+
+```{r corr}
+hist(r, breaks=100, freq=F, col="orange", 
+   main="Sampling Distribution of r")
+abline(v=rho, col="blue", lwd=2)
+
+```
