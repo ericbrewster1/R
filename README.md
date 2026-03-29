@@ -1,2 +1,2 @@
 # R
-R code from undergrad courework and personal projects
+R code from undergrad coursework and personal projects
